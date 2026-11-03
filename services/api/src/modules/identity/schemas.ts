@@ -12,7 +12,7 @@ const isoDate = z
 const sex = z.enum(["female", "male"]);
 
 /**
- * Histoire F1-1 : nom, prénom, sexe, date de naissance (ou âge estimé), téléphone obligatoires.
+ * Histoire F1-1 : nom, prénom, sexe, date de naissance (ou âge estimé) obligatoires ; téléphone facultatif.
  * Question ouverte : un patient sans téléphone (voir docs/questions.md).
  */
 export const CreatePatientSchema = z
@@ -22,7 +22,8 @@ export const CreatePatientSchema = z
     sex,
     birthDate: isoDate.optional(),
     estimatedAge: z.number().int().min(0).max(120).optional(),
-    phone: z.string().trim().min(3).max(30),
+    // Le téléphone est facultatif : beaucoup de patients n'en ont pas (décision bêta, docs/decisions-beta.md).
+    phone: z.string().trim().min(3).max(30).optional(),
     externalId: z.string().trim().min(1).max(64).optional(),
     confirmNotDuplicate: z.boolean().optional(),
   })

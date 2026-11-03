@@ -6,6 +6,7 @@ import { ErrorBox, Notice } from "../ui.tsx";
 const CATEGORIES = [
   "physician",
   "nurse",
+  "care_assistant",
   "midwife",
   "lab_technician",
   "imaging_technician",
@@ -65,16 +66,8 @@ interface Leave {
   status: string;
   reason: string | null;
 }
-interface Expiring {
-  id: number;
-  memberId: string;
-  name: string;
-  title: string;
-  expiresOn: string;
-  expired: boolean;
-}
 
-type Tab = "members" | "roster" | "leaves" | "licenses";
+type Tab = "members" | "roster" | "leaves";
 
 function useDepartments(): Department[] {
   const [list, setList] = useState<Department[]>([]);
@@ -97,7 +90,7 @@ const localHour = (iso: string): string =>
 export function Staff({ me }: { me: Me }): ReactNode {
   const [tab, setTab] = useState<Tab>("members");
   const tabs: Tab[] = me.permissions.includes("leave:approve")
-    ? ["members", "roster", "leaves", "licenses"]
+    ? ["members", "roster", "leaves"]
     : ["members"];
   return (
     <section>
@@ -117,7 +110,6 @@ export function Staff({ me }: { me: Me }): ReactNode {
       {tab === "members" && <Members canManage={me.permissions.includes("staff:manage")} />}
       {tab === "roster" && <Roster />}
       {tab === "leaves" && <Leaves />}
-      {tab === "licenses" && <Licenses />}
     </section>
   );
 }
@@ -193,6 +185,7 @@ function Members({ canManage }: { canManage: boolean }): ReactNode {
 function NewMember({ onCreated }: { onCreated: (m: Member) => void }): ReactNode {
   const departments = useDepartments();
   const [open, setOpen] = useState(false);
+  const [account, setAccount] = useState({ on: false, username: "", email: "", password: "" });
   const [f, setF] = useState({
     givenName: "",
     familyName: "",
@@ -216,8 +209,18 @@ function NewMember({ onCreated }: { onCreated: (m: Member) => void }): ReactNode
           hiredOn: f.hiredOn,
           ...(f.departmentCode ? { departmentCode: f.departmentCode } : {}),
           ...(f.phone ? { phone: f.phone } : {}),
+          ...(account.on
+            ? {
+                account: {
+                  username: account.username.trim(),
+                  email: account.email.trim(),
+                  temporaryPassword: account.password,
+                },
+              }
+            : {}),
         },
       });
+      setAccount({ on: false, username: "", email: "", password: "" });
       setOpen(false);
       setF({ ...f, givenName: "", familyName: "", jobTitle: "", phone: "" });
       onCreated(m);
@@ -282,11 +285,56 @@ function NewMember({ onCreated }: { onCreated: (m: Member) => void }): ReactNode
         {t("staff.phone")}
         <input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
       </label>
+      <label className="checks">
+        <input
+          type="checkbox"
+          checked={account.on}
+          onChange={(e) => setAccount({ ...account, on: e.target.checked })}
+          data-create-account
+        />
+        {t("staff.account.create")}
+      </label>
+      {account.on && (
+        <>
+          <label>
+            {t("staff.account.username")}
+            <input
+              value={account.username}
+              onChange={(e) => setAccount({ ...account, username: e.target.value })}
+            />
+          </label>
+          <label>
+            {t("staff.account.email")}
+            <input
+              type="email"
+              value={account.email}
+              onChange={(e) => setAccount({ ...account, email: e.target.value })}
+            />
+          </label>
+          <label>
+            {t("staff.account.password")}
+            <input
+              type="password"
+              value={account.password}
+              onChange={(e) => setAccount({ ...account, password: e.target.value })}
+            />
+          </label>
+        </>
+      )}
       <ErrorBox error={error} />
       <div className="actions">
         <button
           className="primary"
-          disabled={!f.givenName || !f.familyName || !f.jobTitle || !f.hiredOn}
+          disabled={
+            !f.givenName ||
+            !f.familyName ||
+            !f.jobTitle ||
+            !f.hiredOn ||
+            (account.on &&
+              (account.username.trim().length < 3 ||
+                !account.email.includes("@") ||
+                account.password.length < 12))
+          }
           onClick={() => void submit()}
         >
           {t("staff.create")}
@@ -311,7 +359,7 @@ function MemberPanel({
   const [notice, setNotice] = useState("");
   const [status, setStatus] = useState({ status: "suspended", reason: "" });
   const [account, setAccount] = useState("");
-  const [q, setQ] = useState({ kind: "license", title: "", number: "", expiresOn: "" });
+  const [q, setQ] = useState({ kind: "diploma", title: "", number: "", expiresOn: "" });
 
   const load = useCallback(async () => {
     try {
@@ -386,7 +434,7 @@ function MemberPanel({
               value={q.kind}
               onChange={(e) => setQ({ ...q, kind: e.target.value })}
             >
-              {["license", "diploma", "certification"].map((k) => (
+              {["diploma", "certification"].map((k) => (
                 <option key={k} value={k}>
                   {t(`staff.qualification.kind.${k}`)}
                 </option>
@@ -580,6 +628,7 @@ function Roster(): ReactNode {
   return (
     <div className="cols">
       <div className="card">
+        <p className="muted">{t("staff.roster.hint")}</p>
         <label>
           {t("staff.department")}
           <select
@@ -741,30 +790,6 @@ function Leaves(): ReactNode {
           </div>
         </div>
       ))}
-    </div>
-  );
-}
-
-function Licenses(): ReactNode {
-  const [list, setList] = useState<Expiring[]>([]);
-  useEffect(() => {
-    api<{ qualifications: Expiring[] }>("/api/staff/qualifications/expiring?days=90")
-      .then((r) => setList(r.qualifications))
-      .catch(() => setList([]));
-  }, []);
-  return (
-    <div className="card">
-      {list.length === 0 && <p className="muted">{t("common.none")}</p>}
-      <ul className="plain">
-        {list.map((x) => (
-          <li key={x.id} className={x.expired ? "error" : "warn"} data-expiring={x.name}>
-            <strong>{x.name}</strong> · {x.title} ·{" "}
-            {x.expired
-              ? t("staff.licenses.expired")
-              : t("staff.licenses.expiring", { date: x.expiresOn })}
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

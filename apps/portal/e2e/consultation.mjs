@@ -234,6 +234,33 @@ try {
   await note.locator("button:has-text('Accusé de réception')").click();
   await note.waitFor({ state: "detached" });
 
+  // Urgence vitale : le médecin justifie par écrit ; le service d'imagerie reçoit son ticket avant le paiement.
+  await doc.click("label:has-text('Radiographie') input");
+  await doc.locator("[data-emergency]").check();
+  await doc.locator("button:has-text('Envoyer à la caisse')").waitFor();
+  assert.equal(
+    await doc.locator("button:has-text('Envoyer à la caisse')").isDisabled(),
+    true,
+    "justification obligatoire",
+  );
+  await doc
+    .locator("label:has-text('Justification écrite obligatoire') textarea")
+    .fill("Traumatisme thoracique grave, radiographie immédiate");
+  await doc.click("button:has-text('Envoyer à la caisse')");
+  const urgent = await doc.waitForSelector("[role=status]:has-text('URGENCE')");
+  const urgentNumber = (await urgent.textContent()).match(/O-\d{6}/)[0];
+  const urgentOrder = (
+    await api("dev-doctor", `/api/service-orders?patientId=${patient.id}`, { expect: 200 })
+  ).data.orders.find((o) => o.number === urgentNumber);
+  assert.equal(urgentOrder.status, "released", "libérée avant paiement");
+  assert.equal(urgentOrder.emergency, true);
+  await until(
+    async () =>
+      (await api("dev-imaging", `/api/imaging/requests?patientId=${patient.id}`)).data.requests
+        .length === 1,
+    "examen d'imagerie créé sans attendre le paiement",
+  );
+
   // Clôture : impossible sans diagnostic (déjà posé ici), puis plus aucune modification.
   await panel.locator("button:has-text('Clôturer la consultation')").click();
   await doc.locator("[role=status]:has-text('clôturée')").waitFor();

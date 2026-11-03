@@ -13,6 +13,8 @@ export const PlaceOrderSchema = z.object({
     )
     .min(1)
     .max(20),
+  /** Urgence vitale : le médecin justifie par écrit ; les services reçoivent leur ticket avant le paiement, qui régularise ensuite. */
+  emergency: z.object({ justification: z.string().trim().min(10).max(500) }).optional(),
 });
 export type PlaceOrderInput = z.infer<typeof PlaceOrderSchema>;
 

@@ -297,6 +297,8 @@ function Results({ patientId }: { patientId: string }): ReactNode {
 function OrderForm({ entry, onSent }: { entry: Entry; onSent: (m: string) => void }): ReactNode {
   const [acts, setActs] = useState<Act[]>([]);
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [emergency, setEmergency] = useState(false);
+  const [why, setWhy] = useState("");
   const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
@@ -318,10 +320,13 @@ function OrderForm({ entry, onSent }: { entry: Entry; onSent: (m: string) => voi
           patientId: entry.patientId,
           encounterId: entry.encounterId,
           items: [...picked].map((actCode) => ({ actCode, quantity: 1 })),
+          ...(emergency ? { emergency: { justification: why.trim() } } : {}),
         },
       });
       setPicked(new Set());
-      onSent(t("doctor.orderSent", { number: order.number }));
+      onSent(t(emergency ? "doctor.emergencySent" : "doctor.orderSent", { number: order.number }));
+      setEmergency(false);
+      setWhy("");
     } catch (e) {
       setError(e);
     }
@@ -349,10 +354,25 @@ function OrderForm({ entry, onSent }: { entry: Entry; onSent: (m: string) => voi
           </li>
         ))}
       </ul>
+      <label className="checks">
+        <input
+          type="checkbox"
+          checked={emergency}
+          onChange={(e) => setEmergency(e.target.checked)}
+          data-emergency
+        />
+        {t("doctor.emergency")}
+      </label>
+      {emergency && (
+        <label>
+          {t("doctor.emergency.why")}
+          <textarea rows={2} value={why} onChange={(e) => setWhy(e.target.value)} />
+        </label>
+      )}
       <ErrorBox error={error} />
       <button
         className="primary"
-        disabled={picked.size === 0 || !entry.encounterId}
+        disabled={picked.size === 0 || !entry.encounterId || (emergency && why.trim().length < 10)}
         onClick={() => void send()}
       >
         {t("doctor.send")}

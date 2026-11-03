@@ -3,16 +3,18 @@ import { z } from "zod";
 import type { Db } from "../../db.ts";
 import { DomainError } from "../../errors.ts";
 import { contextOf, parseWith, requirePermission } from "../../http.ts";
+import { ROLES, type Role } from "../../auth/permissions.ts";
 import type { UserDirectory } from "../admin/directory.ts";
+import { createUser as createAccount } from "../admin/service.ts";
 import {
   addQualification,
+  DEFAULT_ROLE,
   CATEGORIES,
   cancelLeave,
   createMember,
   createShift,
   decideLeave,
   deleteShift,
-  expiringQualifications,
   getMember,
   linkAccount,
   listLeaves,
@@ -41,6 +43,17 @@ const Member = z.object({
   departmentCode: z.string().trim().min(1).max(20).optional(),
   hiredOn: date,
 });
+/** Création du compte de connexion en même temps que la fiche (facultatif ; le rôle par défaut vient de la catégorie). */
+const NewMember = Member.extend({
+  account: z
+    .object({
+      username: z.string().trim().min(3).max(60),
+      email: z.string().email(),
+      role: z.enum(ROLES).optional(),
+      temporaryPassword: z.string().min(12).max(100),
+    })
+    .optional(),
+});
 const MemberUpdate = Member.partial();
 const Status = z.object({
   status: z.enum(["active", "on_leave", "suspended", "left"]),
@@ -49,7 +62,7 @@ const Status = z.object({
 });
 const Link = z.object({ userId: z.string().trim().min(1).max(100) });
 const Qualification = z.object({
-  kind: z.enum(["diploma", "license", "certification"]),
+  kind: z.enum(["diploma", "certification"]),
   title: z.string().trim().min(2).max(200),
   number: z.string().trim().max(60).optional(),
   issuer: z.string().trim().max(120).optional(),
@@ -102,12 +115,6 @@ export async function registerStaffRoutes(
     cancelLeave(db, contextOf(request), id(request)),
   );
 
-  app.get("/api/staff/qualifications/expiring", { preHandler: manage }, async (request) => ({
-    qualifications: await expiringQualifications(
-      db,
-      Number((request.query as { days?: string }).days ?? 90),
-    ),
-  }));
   app.post("/api/staff/qualifications/:id/revoke", { preHandler: manage }, async (request) =>
     revokeQualification(
       db,
@@ -171,11 +178,48 @@ export async function registerStaffRoutes(
       request.query as { category?: string; department?: string; status?: string; q?: string },
     ),
   }));
-  app.post("/api/staff", { preHandler: manage }, async (request, reply) =>
-    reply
-      .status(201)
-      .send(await createMember(db, contextOf(request), parseWith(Member, request.body))),
-  );
+  app.post("/api/staff", { preHandler: manage }, async (request, reply) => {
+    const { account, ...fields } = parseWith(NewMember, request.body);
+    const ctx = contextOf(request);
+    const role = account
+      ? (account.role ?? (DEFAULT_ROLE[fields.category] as Role | undefined))
+      : undefined;
+    if (account && !role)
+      throw new DomainError(
+        "role_required",
+        "Cette catégorie n'a pas de rôle par défaut : indiquez le rôle du compte.",
+        400,
+      );
+    const member = await createMember(db, ctx, fields);
+    if (!account || !role) return reply.status(201).send(member);
+    try {
+      const created = await createAccount(
+        db,
+        ctx,
+        {
+          username: account.username,
+          email: account.email,
+          role,
+          temporaryPassword: account.temporaryPassword,
+        },
+        directory,
+      );
+      await linkAccount(db, ctx, member.id, created.id);
+      return reply
+        .status(201)
+        .send({ ...member, userId: created.id, account: { username: account.username, role } });
+    } catch (error) {
+      // La fiche existe : les ressources humaines rattachent le compte plus tard.
+      if (error instanceof DomainError) throw error;
+      throw new DomainError(
+        "account_creation_failed",
+        "La fiche est créée mais le compte n'a pas pu l'être : rattachez-le plus tard.",
+        502,
+        { memberId: member.id },
+      );
+    }
+  });
+
   app.get("/api/staff/:id", { preHandler: requirePermission("staff:directory") }, async (request) =>
     getMember(db, contextOf(request), id(request)),
   );

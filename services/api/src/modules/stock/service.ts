@@ -7,8 +7,8 @@ import { DomainError, notFound } from "../../errors.ts";
 import { appendEvent } from "../../events/outbox.ts";
 import { patientSummaries } from "../identity/interface.ts";
 
-/** Délai d'alerte avant péremption. VALEUR D'EXEMPLE (A-VALIDER-PHARMACIEN, question Q16). */
-export const EXPIRY_WARNING_DAYS = 90;
+/** Alerte de péremption à 6 mois : la chaleur et les retards d'approvisionnement imposent de l'avance (décision bêta, Q16). */
+export const EXPIRY_WARNING_DAYS = 180;
 
 export type ItemKind = "drug" | "consumable" | "reagent" | "supply";
 

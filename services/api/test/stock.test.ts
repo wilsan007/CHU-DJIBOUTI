@@ -653,7 +653,7 @@ test("alertes et seuils s'appliquent à tous les articles ; la direction ne voit
         "storekeeper",
         "POST",
         "/api/stock/depots",
-        { code: "MAT", name: "Réserve maternité", kind: "ward" },
+        { code: "MAT2", name: "Réserve maternité 2", kind: "ward" },
         KEEPER,
       )
     ).status,

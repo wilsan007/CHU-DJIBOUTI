@@ -78,7 +78,7 @@ try {
   await importCatalogs();
   const suffix = String(Date.now()).slice(-6);
 
-  // 1. Réception : création du patient (avec détection de doublon) et admission.
+  // 1. Réception : création du patient SANS téléphone (facultatif) (avec détection de doublon) et admission.
   const reception = await login(browser, "dev-reception");
   await reception.locator("nav button:has-text('Réception')").waitFor();
   assert.equal(
@@ -90,7 +90,6 @@ try {
   await reception.fill("label:text-is('Prénom') input", "Amina");
   await reception.fill("label:text-is('Nom') input", `Essai${suffix}`);
   await reception.fill("label:text-is('Date de naissance') input", "1990-05-12");
-  await reception.fill("label:text-is('Téléphone') input", `0077${suffix}`);
   await reception.click("button:has-text('Enregistrer')");
   await reception.waitForSelector("h2:has-text('Amina')");
   await shot(reception, "1-reception-admission");
@@ -104,7 +103,6 @@ try {
   await reception.fill("label:text-is('Prénom') input", "Amina");
   await reception.fill("label:text-is('Nom') input", `Essai${suffix}`);
   await reception.fill("label:text-is('Date de naissance') input", "1990-05-12");
-  await reception.fill("label:text-is('Téléphone') input", `0077${suffix}`);
   await reception.click("button:has-text('Enregistrer')");
   await reception.waitForSelector("[role=alert]:has-text('proches existent')");
   await shot(reception, "2-doublon");

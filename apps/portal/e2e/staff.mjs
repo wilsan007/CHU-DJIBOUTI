@@ -1,20 +1,28 @@
-// Écrans du personnel, dans un vrai navigateur : fiche d'agent, licence, planning de garde (refus de chevauchement, de repos
-// et de licence), congé demandé par l'agent et décidé par les ressources humaines, suspension qui coupe le compte.
+// Écrans du personnel, dans un vrai navigateur : fiche d'agent, diplôme, planning de garde de 8 à 10 h (refus de chevauchement, de
+// repos de 24 h et de durée hors limites, aucune licence exigée), congé demandé par l'agent et décidé par les ressources humaines, suspension qui coupe le compte.
 import assert from "node:assert/strict";
-import { api, chromium, login, shot, sleep, token } from "./lib.mjs";
+import { api, chromium, kcAdmin, login, PORTAL, shot, sleep, token } from "./lib.mjs";
 
 const suffix = String(Date.now()).slice(-6);
 const day = (n) => new Date(Date.now() + 3 * 3600_000 + n * 86_400_000).toISOString().slice(0, 10);
-const subOf = async (user) =>
-  JSON.parse(Buffer.from((await token(user)).split(".")[1], "base64url").toString()).sub;
 
 const browser = await chromium.launch();
 try {
-  // Rejouable : le compte de test est détaché de l'agent qui le portait lors d'une exécution précédente.
-  const sub = await subOf("dev-doctor2");
-  for (const m of (await api("dev-hr", "/api/staff", { expect: 200 })).data.staff)
-    if (m.userId === sub)
-      await api("dev-hr", `/api/staff/${m.id}/unlink`, { method: "POST", expect: 200 });
+  // Rejouable : le compte de test est remis en état (réactivé dans Keycloak, agent réactivé puis détaché) si une
+  // exécution précédente s'est arrêtée pendant la suspension.
+  const [kcUser] = await kcAdmin("GET", "/users?username=dev-doctor2&exact=true");
+  await kcAdmin("PUT", `/users/${kcUser.id}`, { ...kcUser, enabled: true });
+  const sub = kcUser.id;
+  for (const m of (await api("dev-hr", "/api/staff", { expect: 200 })).data.staff) {
+    if (m.userId !== sub) continue;
+    if (m.status === "suspended")
+      await api("dev-hr", `/api/staff/${m.id}/status`, {
+        method: "POST",
+        body: { status: "active", effectiveOn: day(0), reason: "Remise en état du test" },
+        expect: 200,
+      });
+    await api("dev-hr", `/api/staff/${m.id}/unlink`, { method: "POST", expect: 200 });
+  }
 
   const hr = await login(browser, "dev-hr");
   await hr.locator("nav[aria-label='principal'] button:has-text('Personnel')").waitFor();
@@ -41,11 +49,12 @@ try {
   const panel = hr.locator(`[data-member-panel='${doc}']`);
   await panel.waitFor();
 
-  // Sans licence d'exercice valide, impossible de planifier (vérifié plus bas). On ajoute la licence.
-  await panel.locator("input[aria-label='Intitulé']").fill("Licence d'exercice (exemple de test)");
-  await panel.locator("input[aria-label='Expiration']").fill(day(20));
+  // Diplôme (informatif : aucune licence d'exercice n'est contrôlée).
+  await panel
+    .locator("input[aria-label='Intitulé']")
+    .fill("Doctorat en médecine (exemple de test)");
   await panel.locator("button:has-text('Ajouter')").click();
-  await panel.locator("[data-qualification='Licence d\\'exercice (exemple de test)']").waitFor();
+  await panel.locator("[data-qualification='Doctorat en médecine (exemple de test)']").waitFor();
   await shot(hr, "40-personnel-fiche");
 
   // Rattachement du compte de connexion (identifiant Keycloak de dev-doctor2).
@@ -53,8 +62,32 @@ try {
   await panel.locator("button:has-text('Rattacher')").click();
   await panel.locator(`text=${sub}`).waitFor();
 
-  // Un second agent, sans licence : refusé au planning.
+  // Un second agent, sans aucune licence ni diplôme saisi : planifiable (pas de contrôle de licence).
   const nurse = await create("Infirmier", `Sanslicence${suffix}`, "nurse", "Infirmier");
+
+  // Fiche et compte de connexion créés ensemble (compte Keycloak réel, rôle déduit de la catégorie).
+  await hr.click("button:has-text('Nouvel agent')");
+  await hr.fill("label:text-is('Prénom') input", "Aide");
+  await hr.fill("label:text-is('Nom') input", `Soignante${suffix}`);
+  await hr.locator("label:text-is('Catégorie') select").selectOption("care_assistant");
+  await hr.fill("label:text-is('Fonction') input", "Aide-soignante");
+  await hr.fill("label:text-is('Date d\\'embauche') input", "2024-02-01");
+  await hr.check("[data-create-account]");
+  await hr.fill("label:has-text('Identifiant du compte') input", `aide.${suffix}`);
+  await hr.fill("label:has-text('Adresse e-mail') input", `aide.${suffix}@chu.invalid`);
+  await hr.fill("label:has-text('Mot de passe temporaire') input", `Temporaire-${suffix}-Aa1`);
+  await hr.click("button:has-text('Créer la fiche')");
+  const aidePanel = hr.locator(`[data-member-panel]:not([data-member-panel='${nurse}'])`);
+  await aidePanel.waitFor();
+  const aide = await aidePanel.getAttribute("data-member-panel");
+  await hr
+    .locator(`[data-member-panel='${aide}']`)
+    .locator("text=/Rattacher un compte \\(identifiant\\) : [0-9a-f-]{36}/")
+    .waitFor();
+  const created = (await api("dev-hr", "/api/staff", { expect: 200 })).data.staff.find(
+    (m) => m.matricule === aide,
+  );
+  assert.match(created.userId, /^[0-9a-f-]{36}$/, "compte Keycloak créé et rattaché");
 
   /* ------------------------------------------------ planning */
   await hr.click("[data-tab='roster']");
@@ -71,12 +104,14 @@ try {
   await plan(docLabel, day(2), 8, 16);
   await hr.locator("[role=status]:has-text('Garde planifiée')").waitFor();
   await hr.locator(`tr[data-shift='Docteure Essai${suffix}']`).waitFor();
-  await plan(docLabel, day(2), 14, 20);
+  await plan(docLabel, day(2), 12, 20);
   await hr.locator("[role=alert]:has-text('déjà de garde')").waitFor();
-  await plan(docLabel, day(3), 2, 8); // 10 h après la fin de la garde précédente (16 h) : repos minimal de 11 h non respecté
+  await plan(docLabel, day(3), 8, 16); // 16 h après la fin de la garde précédente : repos de 24 h non respecté
   await hr.locator("[role=alert]:has-text('Repos minimal')").waitFor();
+  await plan(docLabel, day(6), 8, 14); // 6 h : hors des 8 à 10 heures
+  await hr.locator("[role=alert]:has-text('dure de 8 à 10 heures')").waitFor();
   await plan(`Infirmier Sanslicence${suffix} (${nurse})`, day(2), 8, 16);
-  await hr.locator("[role=alert]:has-text('Licence')").waitFor();
+  await hr.locator("[role=status]:has-text('Garde planifiée')").waitFor();
   await shot(hr, "41-planning");
 
   /* ------------------------------------------------ congé demandé par l'agent */
@@ -121,25 +156,26 @@ try {
   await agent.locator("[data-leave-status='approved']").waitFor();
   await shot(agent, "42-mon-espace");
 
-  // Licences à renouveler : celle de l'agent expire dans 20 jours.
-  await hr.click("[data-tab='licenses']");
-  await hr.locator(`[data-expiring='Docteure Essai${suffix}']`).waitFor();
-
   /* ------------------------------------------------ suspension : le compte est coupé tout de suite */
   await hr.click("[data-tab='members']");
   await hr.fill("input[aria-label='Nom ou matricule']", doc);
   await hr.locator(`button[data-member='${doc}']`).click();
   const p2 = hr.locator(`[data-member-panel='${doc}']`);
+  const oldToken = await token("dev-doctor2"); // jeton encore valide au moment de la suspension
   await p2.locator("select[aria-label='Situation']").selectOption("suspended");
   await p2.locator("input[aria-label='Motif']").fill("Procédure disciplinaire en cours");
   await p2.locator("button:has-text('Changer la situation')").click();
   await hr.locator("[role=status]:has-text('Compte : désactivé')").waitFor();
   await agent.reload();
   await agent.locator("[role=alert]:has-text('désactivé')").waitFor();
+  const stale = await fetch(`${PORTAL}/api/staff`, {
+    headers: { authorization: `Bearer ${oldToken}` },
+  });
+  assert.equal(stale.status, 403, "l'API refuse un jeton encore valide d'un compte suspendu");
   assert.equal(
-    (await api("dev-doctor2", "/api/staff")).status,
-    403,
-    "l'API refuse aussi le compte suspendu",
+    await token("dev-doctor2"),
+    undefined,
+    "Keycloak refuse aussi toute nouvelle connexion",
   );
 
   await p2.locator("select[aria-label='Situation']").selectOption("active");
@@ -150,7 +186,7 @@ try {
   await sleep(100);
 
   console.log(
-    "OK : personnel (fiche, licence, planning, congé, suspension) vérifié dans le navigateur.",
+    "OK : personnel (fiche, diplôme, planning 8–10 h, repos 24 h, congé, suspension) vérifié dans le navigateur.",
   );
 } finally {
   await browser.close();

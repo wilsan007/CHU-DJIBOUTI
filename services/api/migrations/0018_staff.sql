@@ -17,7 +17,7 @@ create table staff.members (
   phone text,
   email text,
   category text not null check (category in
-    ('physician', 'nurse', 'midwife', 'lab_technician', 'imaging_technician', 'pharmacist', 'biologist',
+    ('physician', 'nurse', 'care_assistant', 'midwife', 'lab_technician', 'imaging_technician', 'pharmacist', 'biologist',
      'cashier', 'reception', 'storekeeper', 'administration', 'support', 'management')),
   job_title text not null,
   department_code text,
@@ -33,11 +33,11 @@ create table staff.members (
 create index staff_members_department_idx on staff.members (department_code, status);
 create index staff_members_name_idx on staff.members using gin ((lower(family_name || ' ' || given_name)) gin_trgm_ops);
 
--- Diplômes, licences d'exercice et certifications ; une licence expirée interdit le planning.
+-- Diplômes et certifications (informatif : aucune licence d'exercice n'est contrôlée).
 create table staff.qualifications (
   id bigint generated always as identity primary key,
   member_id uuid not null references staff.members (id),
-  kind text not null check (kind in ('diploma', 'license', 'certification')),
+  kind text not null check (kind in ('diploma', 'certification')),
   title text not null,
   number text,
   issuer text,
@@ -61,7 +61,7 @@ create table staff.shifts (
   created_by text not null,
   created_at timestamptz not null default now(),
   check (ends_at > starts_at),
-  check (ends_at - starts_at <= interval '26 hours'),
+  check (ends_at - starts_at between interval '8 hours' and interval '10 hours'),
   exclude using gist (member_id with =, tstzrange(starts_at, ends_at) with &&)
 );
 create index shifts_time_idx on staff.shifts (department_code, starts_at);
@@ -85,8 +85,8 @@ create table staff.leaves (
 create index leaves_member_idx on staff.leaves (member_id, starts_on);
 
 create table staff.settings (key text primary key, value text not null);
--- Repos minimal entre deux gardes : valeur d'exemple (A-VALIDER-RH).
-insert into staff.settings (key, value) values ('min_rest_hours', '11');
+-- Repos après une garde : 24 heures (décision du CHU).
+insert into staff.settings (key, value) values ('min_rest_hours', '24');
 
 revoke all on schema staff from public;
 revoke all on all tables in schema staff from public;

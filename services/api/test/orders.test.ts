@@ -728,3 +728,114 @@ test("les consommateurs de la règle de la caisse sont indépendants : la caisse
   await t.dispatcher.drain();
   assert.equal((await pendingInvoiceOf(order.body.number)).orderNumber, order.body.number);
 });
+
+test("urgence vitale : le médecin justifie par écrit, les services reçoivent leur ticket avant le paiement, la caisse régularise ensuite", async () => {
+  const { patient, encounterId } = await consultedPatient();
+  const body = (extra: Record<string, unknown>) => ({
+    patientId: patient.id,
+    encounterId,
+    items: [{ actCode: "LAB-GLY", quantity: 1 }],
+    ...extra,
+  });
+  assert.equal(
+    (
+      await call(
+        "doctor",
+        "POST",
+        "/api/service-orders",
+        body({ emergency: { justification: "court" } }),
+        DOCTOR,
+      )
+    ).status,
+    400,
+    "justification trop courte",
+  );
+  const denied = await call(
+    "nurse",
+    "POST",
+    "/api/service-orders",
+    body({
+      emergency: { justification: "Détresse respiratoire, glycémie à contrôler tout de suite" },
+    }),
+    "inf-urgence",
+  );
+  assert.equal(denied.status, 403, "seul un médecin déclare une urgence vitale");
+
+  const order = await call(
+    "doctor",
+    "POST",
+    "/api/service-orders",
+    body({ emergency: { justification: "Coma hypoglycémique suspecté, glycémie immédiate" } }),
+    DOCTOR,
+  );
+  assert.equal(order.status, 201, order.raw);
+  assert.equal(order.body.emergency, true);
+  assert.equal(order.body.status, "released", "libérée sans attendre le paiement");
+  const tickets = await db.owner.query(
+    "select code, department_code, released_by from orders.department_tickets where order_id = $1",
+    [order.body.id],
+  );
+  assert.deepEqual(
+    [tickets.rowCount, tickets.rows[0].department_code, tickets.rows[0].released_by],
+    [1, "LAB", DOCTOR],
+  );
+
+  // La facture reste à encaisser ; la demande est repérée dans le tableau de bord de la direction.
+  await t.dispatcher.drain();
+  const invoice = await pendingInvoiceOf(order.body.number);
+  assert.equal(invoice.total, 1500);
+  assert.equal((await call("direction", "GET", "/api/dashboard")).body.activity.emergencyUnpaid, 1);
+  assert.equal(
+    (
+      await db.owner.query(
+        "select 1 from audit.log where action = 'order.emergency' and entity_id = $1",
+        [order.body.id],
+      )
+    ).rowCount,
+    1,
+  );
+  const labReq = await call(
+    "lab",
+    "GET",
+    `/api/lab/requests?patientId=${patient.id}`,
+    undefined,
+    LAB,
+  );
+  assert.equal(labReq.body.requests.length, 1, "le laboratoire a déjà sa demande");
+
+  // Le paiement régularise : pas de second ticket, trace complète.
+  const paid = await call(
+    "cashier",
+    "POST",
+    `/api/billing/invoices/${invoice.id}/pay`,
+    { method: "cash", receivedAmount: 1500 },
+    CASHIER,
+  );
+  assert.equal(paid.status, 200, paid.raw);
+  await t.dispatcher.drain();
+  assert.equal(
+    (
+      await db.owner.query(
+        "select count(*)::int n from orders.department_tickets where order_id = $1",
+        [order.body.id],
+      )
+    ).rows[0].n,
+    1,
+  );
+  const trace = await call(
+    "cashier",
+    "GET",
+    `/api/service-orders/${order.body.id}/trace`,
+    undefined,
+    CASHIER,
+  );
+  const steps = trace.body.steps.map((s: { step: string }) => s.step);
+  assert.deepEqual(steps.slice(0, 3), ["placed", "emergency_declared", "sent_to_departments"]);
+  assert.ok(steps.includes("emergency_regularized"));
+  assert.equal((await call("direction", "GET", "/api/dashboard")).body.activity.emergencyUnpaid, 0);
+
+  // Sans urgence, la règle de la caisse reste entière.
+  const normal = await place(patient.id, encounterId, [{ actCode: "LAB-NFS", quantity: 1 }]);
+  assert.equal(normal.body.status, "awaiting_payment");
+  assert.equal(normal.body.emergency, false);
+});

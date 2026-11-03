@@ -97,6 +97,11 @@ export async function dashboard(db: Db, ctx: RequestContext, date?: string) {
       detail: { date: day },
     }),
   );
+  const emergencyUnpaid = await one(
+    `select count(*) as n from orders.service_orders o join billing.invoices i on i.order_id = o.id and i.kind = 'invoice'
+      where o.emergency and i.status = 'pending'`,
+    [],
+  );
   const staff = await headcount(db, day);
   return {
     date: day,
@@ -105,6 +110,7 @@ export async function dashboard(db: Db, ctx: RequestContext, date?: string) {
       consultationsClosed: Number(closed.n),
       ordersPlaced: Number(placed.n),
       ordersReleased: Number(released.n),
+      emergencyUnpaid: Number(emergencyUnpaid.n),
       dispensations: Number(disp.n),
       labRequestsCreated: Number(labCreated.n),
     },

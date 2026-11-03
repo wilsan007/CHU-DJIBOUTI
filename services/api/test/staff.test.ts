@@ -43,22 +43,6 @@ async function create(over: Record<string, unknown> = {}) {
   assert.equal(res.status, 201, res.raw);
   return res.body as { id: string; matricule: string };
 }
-async function license(id: string, expiresOn?: string) {
-  const res = await call(
-    "hr",
-    "POST",
-    `/api/staff/${id}/qualifications`,
-    {
-      kind: "license",
-      title: "Licence d'exercice (exemple de test)",
-      number: "L-123",
-      ...(expiresOn ? { expiresOn } : {}),
-    },
-    HR,
-  );
-  assert.equal(res.status, 201, res.raw);
-  return res.body.id as number;
-}
 const shift = (
   memberId: string,
   startsAt: string,
@@ -152,56 +136,84 @@ test("registre : matricule continu ; données personnelles réservées aux resso
   );
 });
 
-test("licence d'exercice : sans licence valide, un médecin ou un infirmier ne peut pas être planifié", async () => {
-  const doc = await create({ givenName: "Hassan", familyName: "Licence" });
-  const noLicense = await shift(doc.id, at(1, 8), at(1, 16));
-  assert.equal(noLicense.body.error.code, "license_invalid");
-  const lic = await license(doc.id, day(10));
-  assert.equal((await shift(doc.id, at(1, 8), at(1, 16))).status, 201);
+test("catégories : aucune licence contrôlée, contact avec les patients signalé, garde de 8 à 10 heures seulement", async () => {
+  const doc = await create({ givenName: "Hassan", familyName: "Garde" });
+  const nurseAide = await create({
+    givenName: "Asha",
+    familyName: "Aide",
+    category: "care_assistant",
+    jobTitle: "Aide-soignante",
+    departmentCode: "HOSP",
+  });
+  const assistant = await create({
+    givenName: "Moussa",
+    familyName: "Entretien",
+    category: "support",
+    jobTitle: "Assistant sans contact avec les patients",
+    departmentCode: "HOSP",
+  });
+  const viewOf = async (id: string) => (await call("nurse", "GET", `/api/staff/${id}`)).body;
+  assert.deepEqual(
+    [
+      (await viewOf(doc.id)).patientContact,
+      (await viewOf(nurseAide.id)).patientContact,
+      (await viewOf(assistant.id)).patientContact,
+    ],
+    [true, true, false],
+  );
+
+  // Aucune licence : médecin, aide-soignant et assistant se planifient sans autre condition.
+  assert.equal((await shift(doc.id, at(1, 20), at(2, 6))).status, 201, "garde de nuit de 10 h");
   assert.equal(
-    (await shift(doc.id, at(20, 8), at(20, 16))).body.error.code,
-    "license_invalid",
-    "la licence expire avant cette garde",
+    (await shift(nurseAide.id, at(1, 8), at(1, 16), { departmentCode: "HOSP" })).status,
+    201,
+    "garde de 8 h",
   );
-  const exp = await call("hr", "GET", "/api/staff/qualifications/expiring?days=30", undefined, HR);
-  assert.ok(
-    exp.body.qualifications.some(
-      (q: { memberId: string; expired: boolean }) => q.memberId === doc.id && q.expired === false,
+  assert.equal(
+    (await shift(assistant.id, at(1, 8), at(1, 16), { departmentCode: "HOSP" })).status,
+    201,
+  );
+
+  // Durée : 8 à 10 heures.
+  const tooShort = await shift(doc.id, at(5, 8), at(5, 14));
+  assert.equal(tooShort.body.error.code, "shift_duration");
+  assert.equal(
+    (await shift(doc.id, at(6, 8), at(6, 19))).body.error.code,
+    "shift_duration",
+    "11 h : trop long",
+  );
+  assert.equal((await shift(doc.id, at(7, 8), at(7, 18))).status, 201, "10 h : accepté");
+  await assert.rejects(
+    db.owner.query(
+      "insert into staff.shifts (member_id, department_code, kind, starts_at, ends_at, created_by) values ($1, 'CONS', 'day', $2, $3, 'x')",
+      [doc.id, at(20, 8), at(20, 20)],
     ),
+    /check|shifts_check/i,
+    "la base refuse aussi une garde de 12 h",
   );
-  assert.equal((await call("doctor", "GET", "/api/staff/qualifications/expiring")).status, 403);
+  // Plus aucun contrôle de licence : l'ancien type est refusé à la saisie.
   assert.equal(
     (
       await call(
         "hr",
         "POST",
-        `/api/staff/qualifications/${lic}/revoke`,
-        { reason: "Licence suspendue par l'Ordre" },
+        `/api/staff/${doc.id}/qualifications`,
+        { kind: "license", title: "Licence" },
         HR,
       )
     ).status,
-    200,
+    400,
   );
   assert.equal(
-    (await call("hr", "POST", `/api/staff/qualifications/${lic}/revoke`, { reason: "Encore" }, HR))
-      .body.error.code,
-    "already_revoked",
-  );
-  assert.equal(
-    (await shift(doc.id, at(2, 8), at(2, 16))).body.error.code,
-    "license_invalid",
-    "licence retirée",
-  );
-  // Une catégorie sans exigence de licence se planifie sans.
-  const agent = await create({
-    givenName: "Moussa",
-    familyName: "Entretien",
-    category: "support",
-    jobTitle: "Agent d'entretien",
-    departmentCode: "HOSP",
-  });
-  assert.equal(
-    (await shift(agent.id, at(1, 6), at(1, 14), { departmentCode: "HOSP" })).status,
+    (
+      await call(
+        "hr",
+        "POST",
+        `/api/staff/${doc.id}/qualifications`,
+        { kind: "diploma", title: "Doctorat en médecine", issuedOn: "2015-07-01" },
+        HR,
+      )
+    ).status,
     201,
   );
   assert.equal(
@@ -210,27 +222,60 @@ test("licence d'exercice : sans licence valide, un médecin ou un infirmier ne p
         "hr",
         "POST",
         `/api/staff/${doc.id}/qualifications`,
-        { kind: "license", title: "Licence x", issuedOn: "2025-01-01", expiresOn: "2024-01-01" },
+        {
+          kind: "certification",
+          title: "Urgences",
+          issuedOn: "2025-01-01",
+          expiresOn: "2024-01-01",
+        },
         HR,
       )
     ).body.error.code,
     "bad_dates",
   );
+  const q = (await call("hr", "GET", `/api/staff/${doc.id}`, undefined, HR)).body.qualifications;
+  assert.equal(q.length, 1);
+  assert.equal(
+    (
+      await call(
+        "hr",
+        "POST",
+        `/api/staff/qualifications/${q[0].id}/revoke`,
+        { reason: "Saisie erronée" },
+        HR,
+      )
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await call(
+        "hr",
+        "POST",
+        `/api/staff/qualifications/${q[0].id}/revoke`,
+        { reason: "Encore" },
+        HR,
+      )
+    ).body.error.code,
+    "already_revoked",
+  );
 });
 
-test("planning : chevauchement et repos minimal refusés, garde de plus de 26 h refusée, qui est de garde maintenant", async () => {
-  const doc = await create({ givenName: "Samira", familyName: "Garde" });
-  await license(doc.id);
-  assert.equal((await shift(doc.id, at(3, 8), at(3, 20))).status, 201);
-  const overlap = await shift(doc.id, at(3, 18), at(3, 23));
+test("planning : chevauchement et repos de 24 h après une garde refusés, qui est de garde maintenant", async () => {
+  const doc = await create({ givenName: "Samira", familyName: "Planning" });
+  assert.equal((await shift(doc.id, at(3, 8), at(3, 18))).status, 201);
+  const overlap = await shift(doc.id, at(3, 16), at(4, 2));
   assert.equal(overlap.body.error.code, "shift_overlap");
-  const rest = await shift(doc.id, at(4, 4), at(4, 12)); // 8 h après la fin : moins de 11 h de repos
+  const rest = await shift(doc.id, at(4, 12), at(4, 20)); // 18 h après la fin : moins de 24 h de repos
   assert.equal(rest.body.error.code, "rest_violation");
-  assert.equal(rest.body.error.details.minRestHours, 11);
-  assert.equal((await shift(doc.id, at(4, 7), at(4, 15))).status, 201, "11 h de repos : accepté");
-  assert.equal((await shift(doc.id, at(6, 0), at(7, 12))).body.error.code, "shift_too_long");
+  assert.equal(rest.body.error.details.minRestHours, 24);
   assert.equal(
-    (await shift(doc.id, at(6, 8), at(6, 16), { departmentCode: "NOPE" })).body.error.code,
+    (await shift(doc.id, at(4, 18), at(5, 4))).status,
+    201,
+    "24 h de repos exactement : accepté",
+  );
+  assert.equal(
+    (await shift(doc.id, at(8, 8), at(8, 16), { departmentCode: "NOPE" })).body.error.code,
     "unknown_department",
   );
   assert.equal(
@@ -243,7 +288,7 @@ test("planning : chevauchement et repos minimal refusés, garde de plus de 26 h 
   const planning = await call(
     "nurse",
     "GET",
-    `/api/staff/shifts?from=${encodeURIComponent(at(3, 0))}&to=${encodeURIComponent(at(5, 0))}&department=CONS`,
+    `/api/staff/shifts?from=${encodeURIComponent(at(3, 0))}&to=${encodeURIComponent(at(6, 0))}&department=CONS`,
   );
   assert.equal(planning.body.shifts.length, 2);
   assert.equal(
@@ -251,7 +296,7 @@ test("planning : chevauchement et repos minimal refusés, garde de plus de 26 h 
       await call(
         "direction",
         "GET",
-        `/api/staff/shifts?from=${encodeURIComponent(at(3, 0))}&to=${encodeURIComponent(at(5, 0))}`,
+        `/api/staff/shifts?from=${encodeURIComponent(at(3, 0))}&to=${encodeURIComponent(at(6, 0))}`,
       )
     ).status,
     403,
@@ -264,7 +309,7 @@ test("planning : chevauchement et repos minimal refusés, garde de plus de 26 h 
     [
       doc.id,
       new Date(now.getTime() - 3600_000).toISOString(),
-      new Date(now.getTime() + 7 * 3600_000).toISOString(),
+      new Date(now.getTime() + 8 * 3600_000).toISOString(),
     ],
   );
   const duty = await call("lab", "GET", "/api/staff/on-duty?department=URG");
@@ -273,7 +318,7 @@ test("planning : chevauchement et repos minimal refusés, garde de plus de 26 h 
       d.name,
       d.departmentCode,
     ]),
-    [["Samira Garde", "URG"]],
+    [["Samira Planning", "URG"]],
   );
   assert.equal(
     (await call("lab", "GET", "/api/staff/on-duty?department=CONS")).body.onDuty.length,
@@ -304,16 +349,15 @@ test("planning : chevauchement et repos minimal refusés, garde de plus de 26 h 
   await assert.rejects(
     db.owner.query(
       "insert into staff.shifts (member_id, department_code, kind, starts_at, ends_at, created_by) values ($1, 'CONS', 'day', $2, $3, 'x')",
-      [doc.id, at(4, 10), at(4, 12)],
+      [doc.id, at(4, 19), at(4, 21)],
     ),
-    /exclusion|chevauch|conflicting/i,
-    "la base refuse aussi un chevauchement écrit directement",
+    /exclusion|chevauch|conflicting|check/i,
+    "la base refuse aussi un chevauchement ou une durée écrits directement",
   );
 });
 
 test("congés : demande par l'agent, décision par un autre, gardes sur la période à retirer d'abord", async () => {
   const doc = await create({ givenName: "Idriss", familyName: "Conge" });
-  await license(doc.id);
   assert.equal(
     (await call("doctor", "GET", "/api/staff/me", undefined, "dr-conge")).body.error.code,
     "no_staff_record",
@@ -480,7 +524,6 @@ test("congés : demande par l'agent, décision par un autre, gardes sur la péri
 
 test("situation de l'agent : suspendu ou parti, son compte est coupé tout de suite et ses gardes futures retirées", async () => {
   const doc = await create({ givenName: "Omar", familyName: "Suspendu" });
-  await license(doc.id);
   await call("hr", "POST", `/api/staff/${doc.id}/link`, { userId: "dr-suspendu" }, HR);
   assert.equal(
     (await call("doctor", "GET", "/api/staff", undefined, "dr-suspendu")).status,
@@ -488,7 +531,7 @@ test("situation de l'agent : suspendu ou parti, son compte est coupé tout de su
     "le compte fonctionne",
   );
   await shift(doc.id, at(40, 8), at(40, 16));
-  await shift(doc.id, at(41, 8), at(41, 16));
+  await shift(doc.id, at(42, 8), at(42, 16));
 
   const sus = await call(
     "hr",
@@ -502,7 +545,7 @@ test("situation de l'agent : suspendu ou parti, son compte est coupé tout de su
   const denied = await call("doctor", "GET", "/api/staff", undefined, "dr-suspendu");
   assert.equal(denied.status, 403);
   assert.equal(denied.body.error.code, "account_disabled");
-  assert.equal((await shift(doc.id, at(42, 8), at(42, 16))).body.error.code, "member_not_active");
+  assert.equal((await shift(doc.id, at(44, 8), at(44, 16))).body.error.code, "member_not_active");
   assert.equal(
     (
       await call(
@@ -579,6 +622,122 @@ test("effectifs du tableau de bord : chiffres identiques aux sources, sans donn�
   );
   assert.deepEqual(d.byCategory, Object.fromEntries(cats.rows.map((r) => [r.category, r.n])));
   assert.equal(d.onDutyNow.URG, 1);
-  assert.equal(typeof d.qualificationsExpiring, "number");
+  const contact = await db.owner.query(
+    "select count(*)::int n from staff.members where status = 'active' and category in ('physician', 'nurse', 'care_assistant', 'midwife', 'lab_technician', 'imaging_technician')",
+  );
+  assert.equal(d.patientContact, contact.rows[0].n);
   assert.ok(!JSON.stringify(d).includes("Essai"), "aucun nom d'agent");
+});
+
+test("fiche et compte de connexion créés ensemble ; rôle par défaut selon la catégorie ; fiche conservée si l'annuaire est absent", async () => {
+  const created: string[] = [];
+  const withDirectory = await createTestApp(db.app, {
+    directory: {
+      createUser: async (input) => {
+        created.push(`${input.username}:${input.role}`);
+        return { id: `kc-${input.username}` };
+      },
+      setEnabled: async () => undefined,
+      setRole: async () => undefined,
+    },
+  });
+  try {
+    const c = makeCaller(withDirectory);
+    const pwd = "Mot-de-passe-temporaire-1";
+    const nurse = await c(
+      "hr",
+      "POST",
+      "/api/staff",
+      member({
+        category: "nurse",
+        jobTitle: "Infirmière",
+        account: { username: "inf.nouvelle", email: "inf@chu.invalid", temporaryPassword: pwd },
+      }),
+      HR,
+    );
+    assert.equal(nurse.status, 201, nurse.raw);
+    assert.equal(nurse.body.userId, "kc-inf.nouvelle");
+    assert.deepEqual(created, ["inf.nouvelle:nurse"], "catégorie infirmière : rôle nurse");
+    assert.equal(
+      (await c("hr", "GET", `/api/staff/${nurse.body.id}`, undefined, HR)).body.userId,
+      "kc-inf.nouvelle",
+    );
+    assert.equal(
+      (await db.owner.query("select 1 from admin.users where id = 'kc-inf.nouvelle'")).rowCount,
+      1,
+    );
+
+    // Aide-soignant : rôle nurse ; assistant sans contact avec les patients : pas de rôle par défaut, la fiche n'est pas créée.
+    const aide = await c(
+      "hr",
+      "POST",
+      "/api/staff",
+      member({
+        category: "care_assistant",
+        jobTitle: "Aide-soignant",
+        account: { username: "aide.nouveau", email: "aide@chu.invalid", temporaryPassword: pwd },
+      }),
+      HR,
+    );
+    assert.equal(aide.status, 201);
+    assert.equal(created[1], "aide.nouveau:nurse");
+    const before = (await db.owner.query("select count(*)::int n from staff.members")).rows[0].n;
+    const noRole = await c(
+      "hr",
+      "POST",
+      "/api/staff",
+      member({
+        category: "support",
+        jobTitle: "Assistant",
+        account: { username: "assistant.x", email: "a@chu.invalid", temporaryPassword: pwd },
+      }),
+      HR,
+    );
+    assert.equal(noRole.body.error.code, "role_required");
+    assert.equal(
+      (await db.owner.query("select count(*)::int n from staff.members")).rows[0].n,
+      before,
+    );
+    const explicit = await c(
+      "hr",
+      "POST",
+      "/api/staff",
+      member({
+        category: "support",
+        jobTitle: "Assistant administratif",
+        account: {
+          username: "assistant.y",
+          email: "ay@chu.invalid",
+          role: "reception",
+          temporaryPassword: pwd,
+        },
+      }),
+      HR,
+    );
+    assert.equal(explicit.status, 201);
+    assert.equal(created[2], "assistant.y:reception");
+  } finally {
+    await withDirectory.close();
+  }
+
+  // Sans annuaire configuré : la fiche est créée, le compte est refusé clairement ; rattachement possible plus tard.
+  const lone = await call(
+    "hr",
+    "POST",
+    "/api/staff",
+    member({
+      givenName: "Seul",
+      account: {
+        username: "seul.agent",
+        email: "s@chu.invalid",
+        temporaryPassword: "Mot-de-passe-temporaire-1",
+      },
+    }),
+    HR,
+  );
+  assert.equal(lone.status, 501);
+  assert.equal(
+    (await db.owner.query("select 1 from staff.members where given_name = 'Seul'")).rowCount,
+    1,
+  );
 });

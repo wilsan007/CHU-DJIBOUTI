@@ -117,3 +117,27 @@ export async function importCatalogs() {
 
 export const cardPayload = async (patientId) =>
   (await api("dev-reception", `/api/patients/${patientId}/card`, { expect: 200 })).data.payload;
+
+/** Administration Keycloak (compte de service `chu-admin-api`) : remise en état des comptes de test entre deux exécutions. */
+export async function kcAdmin(method, path, body) {
+  const secret = process.env.CHU_ADMIN_CLIENT_SECRET;
+  if (!secret) throw new Error("CHU_ADMIN_CLIENT_SECRET est obligatoire");
+  const t = await (
+    await fetch(`${KEYCLOAK}/realms/chu/protocol/openid-connect/token`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "client_credentials",
+        client_id: "chu-admin-api",
+        client_secret: secret,
+      }),
+    })
+  ).json();
+  const res = await fetch(`${KEYCLOAK}/admin/realms/chu${path}`, {
+    method,
+    headers: { authorization: `Bearer ${t.access_token}`, "content-type": "application/json" },
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  });
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}

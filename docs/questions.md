@@ -2,6 +2,8 @@
 
 Questions qui demandent une réponse d'un référent avant de figer un comportement.
 
+> **Réponses de la version bêta : voir [`decisions-beta.md`](decisions-beta.md).** Chaque question y a une décision par défaut, à ajuster sur des cas réels.
+
 | N°  | Question                                                                                                                                                                                                                                                                                                                             | À qui                                        | Impact                                             |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- | -------------------------------------------------- |
 | Q1  | Un patient sans téléphone peut-il être enregistré ? Le plan (F1-1) rend le téléphone obligatoire ; en pratique beaucoup de patients n'en ont pas.                                                                                                                                                                                    | Chef de service de la réception              | Création de patient (`CreatePatientSchema`)        |

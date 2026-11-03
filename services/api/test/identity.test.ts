@@ -79,7 +79,6 @@ test("F1-1 : champs obligatoires et dates invalides refusés", async () => {
     phone: "00 00 00 99",
   };
   const bad: [string, Record<string, unknown>][] = [
-    ["sans téléphone", { ...base, phone: undefined }],
     ["sans nom", { ...base, familyName: "" }],
     ["sexe inconnu", { ...base, sex: "x" }],
     ["ni date ni âge", { ...base, birthDate: undefined }],
@@ -93,6 +92,27 @@ test("F1-1 : champs obligatoires et dates invalides refusés", async () => {
     assert.equal(res.statusCode, 400, label);
     assert.equal(res.json().error.code, "validation_error", label);
   }
+});
+
+test("F1-1 : un patient sans téléphone est accepté ; les doublons sont détectés par le nom et la naissance", async () => {
+  const body = {
+    givenName: "Sans",
+    familyName: "Telephone",
+    sex: "female",
+    birthDate: "1975-05-05",
+  };
+  const first = await call("POST", "/api/patients", "reception", body);
+  assert.equal(first.statusCode, 201, first.body);
+  assert.equal(first.json().phone, null);
+  const again = await call("POST", "/api/patients", "reception", body);
+  assert.equal(again.statusCode, 409);
+  assert.equal(again.json().error.code, "possible_duplicates");
+  const invalid = await call("POST", "/api/patients", "reception", {
+    ...body,
+    familyName: "Autre",
+    phone: "1",
+  });
+  assert.equal(invalid.statusCode, 400, "un numéro fourni mais invalide reste refusé");
 });
 
 test("F1-1 : âge estimé marqué comme tel", async () => {

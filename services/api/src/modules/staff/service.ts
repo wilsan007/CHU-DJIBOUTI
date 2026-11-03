@@ -9,6 +9,7 @@ import { setAccountStatusIn } from "../admin/service.ts";
 export const CATEGORIES = [
   "physician",
   "nurse",
+  "care_assistant",
   "midwife",
   "lab_technician",
   "imaging_technician",
@@ -23,14 +24,41 @@ export const CATEGORIES = [
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
 
-/** Catégories qui exigent une licence d'exercice en cours de validité pour être planifiées (A-VALIDER-RH, question Q30). */
-const LICENSE_REQUIRED: readonly Category[] = [
+/**
+ * Catégories en contact avec les patients (médecin, infirmier, aide-soignant, sage-femme, techniciens de soins).
+ * Les autres agents (assistants, administration, magasin, caisse...) n'ont aucun contact avec les patients.
+ * Aucune licence d'exercice n'est contrôlée par le système (décision du CHU).
+ */
+const PATIENT_CONTACT: readonly Category[] = [
   "physician",
   "nurse",
+  "care_assistant",
   "midwife",
-  "pharmacist",
-  "biologist",
+  "lab_technician",
+  "imaging_technician",
 ];
+/** Rôle de connexion proposé pour chaque catégorie d'agent (les catégories sans rôle n'ont pas de compte par défaut). */
+export const DEFAULT_ROLE: Partial<Record<Category, string>> = {
+  physician: "doctor",
+  nurse: "nurse",
+  care_assistant: "nurse",
+  midwife: "nurse",
+  lab_technician: "lab",
+  imaging_technician: "imaging",
+  pharmacist: "pharmacy",
+  biologist: "biologist",
+  cashier: "cashier",
+  reception: "reception",
+  storekeeper: "storekeeper",
+  management: "direction",
+};
+
+export const hasPatientContact = (category: Category): boolean =>
+  PATIENT_CONTACT.includes(category);
+
+/** Une garde dure de 8 à 10 heures, en plus des heures de travail normales ; le repos après une garde est de 24 heures. */
+export const SHIFT_MIN_HOURS = 8;
+export const SHIFT_MAX_HOURS = 10;
 
 type MemberStatus = "active" | "on_leave" | "suspended" | "left";
 
@@ -62,6 +90,7 @@ const directoryView = (r: MemberRow) => ({
   givenName: r.given_name,
   familyName: r.family_name,
   category: r.category,
+  patientContact: hasPatientContact(r.category),
   jobTitle: r.job_title,
   departmentCode: r.department_code,
   status: r.status,
@@ -336,7 +365,7 @@ export async function unlinkAccount(db: Db, ctx: RequestContext, id: string) {
 /* ------------------------------------------------------------------ qualifications */
 
 export interface QualificationInput {
-  kind: "diploma" | "license" | "certification";
+  kind: "diploma" | "certification";
   title: string;
   number?: string | undefined;
   issuer?: string | undefined;
@@ -432,44 +461,6 @@ export async function revokeQualification(
   });
 }
 
-/** Licences et certifications qui expirent bientôt (ou déjà expirées) : à renouveler avant de planifier. */
-export async function expiringQualifications(db: Db, days: number) {
-  const limit = new Date(Date.now() + days * 86_400_000 + 3 * 3600_000).toISOString().slice(0, 10);
-  const res = await db.query<{
-    id: string;
-    member_id: string;
-    name: string;
-    kind: string;
-    title: string;
-    expires_on: string;
-  }>(
-    `select q.id, q.member_id, m.given_name || ' ' || m.family_name as name, q.kind, q.title, q.expires_on::text as expires_on
-       from staff.qualifications q join staff.members m on m.id = q.member_id
-      where q.revoked_at is null and q.expires_on is not null and q.expires_on <= $1::date and m.status in ('active', 'on_leave')
-      order by q.expires_on, name`,
-    [limit],
-  );
-  const today = localDate(new Date());
-  return res.rows.map((r) => ({
-    id: Number(r.id),
-    memberId: r.member_id,
-    name: r.name,
-    kind: r.kind,
-    title: r.title,
-    expiresOn: r.expires_on,
-    expired: r.expires_on < today,
-  }));
-}
-
-async function licenseValidOn(tx: Tx, memberId: string, date: string): Promise<boolean> {
-  const res = await tx.query(
-    `select 1 from staff.qualifications where member_id = $1 and kind = 'license' and revoked_at is null
-        and (issued_on is null or issued_on <= $2::date) and (expires_on is null or expires_on >= $2::date) limit 1`,
-    [memberId, date],
-  );
-  return (res.rowCount ?? 0) > 0;
-}
-
 /* ------------------------------------------------------------------ planning de garde */
 
 export interface ShiftInput {
@@ -488,8 +479,8 @@ async function minRestHours(tx: Tx): Promise<number> {
 }
 
 /**
- * Création d'une garde. Refusée si l'agent n'est pas en activité, si sa licence d'exercice n'est pas valide ce jour-là,
- * s'il est en congé approuvé, s'il est déjà de garde, ou si le repos minimal entre deux gardes n'est pas respecté.
+ * Création d'une garde (8 à 10 heures). Refusée si l'agent n'est pas en activité, s'il est en congé approuvé, s'il est déjà
+ * de garde, ou si le repos de 24 heures après une garde n'est pas respecté.
  */
 export async function createShift(db: Db, ctx: RequestContext, input: ShiftInput) {
   return withTransaction(db, async (tx) => {
@@ -501,19 +492,16 @@ export async function createShift(db: Db, ctx: RequestContext, input: ShiftInput
         `Cet agent n'est pas en activité (${m.status}) : il ne peut pas être planifié.`,
         409,
       );
-    if (new Date(input.endsAt).getTime() - new Date(input.startsAt).getTime() > 26 * 3600_000)
-      throw new DomainError("shift_too_long", "Une garde ne dépasse pas 26 heures.", 400);
+    const hours =
+      (new Date(input.endsAt).getTime() - new Date(input.startsAt).getTime()) / 3_600_000;
+    if (hours < SHIFT_MIN_HOURS || hours > SHIFT_MAX_HOURS)
+      throw new DomainError(
+        "shift_duration",
+        `Une garde dure de ${SHIFT_MIN_HOURS} à ${SHIFT_MAX_HOURS} heures (celle-ci : ${Math.round(hours * 10) / 10} h).`,
+        400,
+      );
     const startDate = localDate(new Date(input.startsAt));
     const endDate = localDate(new Date(input.endsAt));
-    if (LICENSE_REQUIRED.includes(m.category))
-      for (const d of new Set([startDate, endDate]))
-        if (!(await licenseValidOn(tx, m.id, d)))
-          throw new DomainError(
-            "license_invalid",
-            `Licence d'exercice absente, retirée ou expirée le ${d} : planification refusée.`,
-            409,
-            { date: d },
-          );
     const leave = await tx.query<{ id: string; starts_on: string; ends_on: string }>(
       `select id, starts_on::text as starts_on, ends_on::text as ends_on from staff.leaves
         where member_id = $1 and status = 'approved' and starts_on <= $3::date and ends_on >= $2::date limit 1`,
@@ -863,15 +851,13 @@ export async function headcount(db: Db, day: string) {
   const duty = await db.query<{ department_code: string; n: string }>(
     "select s.department_code, count(*) as n from staff.shifts s where s.starts_at <= now() and s.ends_at > now() group by s.department_code order by s.department_code",
   );
-  const expiring = await db.query<{ n: string }>(
-    "select count(*) as n from staff.qualifications q join staff.members m on m.id = q.member_id where q.revoked_at is null and q.expires_on is not null and q.expires_on <= ($1::date + 90) and m.status in ('active', 'on_leave')",
-    [day],
-  );
   return {
     active: byCat.rows.reduce((n, r) => n + Number(r.n), 0),
     byCategory: Object.fromEntries(byCat.rows.map((r) => [r.category, Number(r.n)])),
     onLeaveToday: Number(leave.rows[0]?.n ?? 0),
     onDutyNow: Object.fromEntries(duty.rows.map((r) => [r.department_code, Number(r.n)])),
-    qualificationsExpiring: Number(expiring.rows[0]?.n ?? 0),
+    patientContact: byCat.rows
+      .filter((r) => hasPatientContact(r.category as Category))
+      .reduce((n, r) => n + Number(r.n), 0),
   };
 }

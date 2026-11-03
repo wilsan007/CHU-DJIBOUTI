@@ -1,5 +1,5 @@
 import { writeAudit, type RequestContext } from "../../audit/audit.ts";
-import { canServeDepartment } from "../../auth/permissions.ts";
+import { can, canServeDepartment } from "../../auth/permissions.ts";
 import { nextNumber } from "../../common/numbering.ts";
 import { withTransaction, type Db, type Tx } from "../../db.ts";
 import { DomainError, notFound } from "../../errors.ts";
@@ -44,6 +44,9 @@ export interface ServiceOrder {
   placedBy: { id: string; name: string | null };
   placedAt: string;
   note: string | null;
+  /** Urgence vitale déclarée par le médecin : libérée avant paiement, à régulariser à la caisse. */
+  emergency: boolean;
+  emergencyJustification: string | null;
   releasedAt: string | null;
   releasedBy: { id: string; name: string | null } | null;
   items?: OrderItem[];
@@ -63,10 +66,12 @@ interface OrderRow {
   released_at: Date | null;
   released_by: string | null;
   released_by_name: string | null;
+  emergency: boolean;
+  emergency_justification: string | null;
 }
 
 const ORDER_COLUMNS = `id, number, patient_id, encounter_id, status, placed_by, placed_by_name, placed_at, note,
-  released_at, released_by, released_by_name`;
+  released_at, released_by, released_by_name, emergency, emergency_justification`;
 
 const toOrder = (r: OrderRow): ServiceOrder => ({
   id: r.id,
@@ -77,6 +82,8 @@ const toOrder = (r: OrderRow): ServiceOrder => ({
   placedBy: { id: r.placed_by, name: r.placed_by_name },
   placedAt: r.placed_at.toISOString(),
   note: r.note,
+  emergency: r.emergency,
+  emergencyJustification: r.emergency_justification,
   releasedAt: r.released_at ? r.released_at.toISOString() : null,
   releasedBy: r.released_by ? { id: r.released_by, name: r.released_by_name } : null,
 });
@@ -202,6 +209,9 @@ export async function placeOrderIn(
   input: PlaceOrderInput,
 ): Promise<ServiceOrder> {
   {
+    const emergency = input.emergency !== undefined;
+    if (emergency && !can(ctx.user.roles, "order:emergency"))
+      throw new DomainError("forbidden", "Seul un médecin peut déclarer une urgence vitale.", 403);
     const patient = await requireActivePatient(tx, input.patientId);
     const encounter = await getEncounter(tx, input.encounterId);
     const family = await relatedPatientIds(tx, patient.id);
@@ -243,9 +253,18 @@ export async function placeOrderIn(
     }
     const number = await nextNumber(tx, "orders", "order", "O");
     const created = await tx.query<OrderRow>(
-      `insert into orders.service_orders (number, patient_id, encounter_id, placed_by, placed_by_name, note)
-       values ($1, $2, $3, $4, $5, $6) returning ${ORDER_COLUMNS}`,
-      [number, patient.id, encounter.id, ctx.user.id, ctx.user.name, input.note ?? null],
+      `insert into orders.service_orders (number, patient_id, encounter_id, placed_by, placed_by_name, note, emergency, emergency_justification)
+       values ($1, $2, $3, $4, $5, $6, $7, $8) returning ${ORDER_COLUMNS}`,
+      [
+        number,
+        patient.id,
+        encounter.id,
+        ctx.user.id,
+        ctx.user.name,
+        input.note ?? null,
+        emergency,
+        input.emergency?.justification ?? null,
+      ],
     );
     const order = toOrder(created.rows[0] as OrderRow);
     for (const i of items) {
@@ -287,8 +306,112 @@ export async function placeOrderIn(
         })),
       },
     });
+    if (emergency) {
+      // Urgence vitale : les services reçoivent leur ticket tout de suite ; la facture reste à régulariser à la caisse.
+      await writeAudit(tx, ctx, {
+        action: "order.emergency",
+        entityType: "service_order",
+        entityId: order.id,
+        patientId: patient.id,
+        detail: { number, justification: input.emergency?.justification },
+      });
+      await recordStep(tx, order.id, "emergency_declared", actorOf(ctx), {
+        justification: input.emergency?.justification,
+      });
+      await releaseOrderIn(
+        tx,
+        ctx,
+        { id: order.id, number, patient_id: patient.id },
+        { userId: ctx.user.id, name: ctx.user.name },
+        "emergency",
+      );
+      order.status = "released";
+      order.releasedAt = new Date().toISOString();
+      order.releasedBy = { id: ctx.user.id, name: ctx.user.name };
+    }
     return order;
   }
+}
+
+/**
+ * Libère une demande : les tickets partent vers chaque service concerné et l'événement est publié.
+ * Appelé à la validation de la caisse (règle de la caisse) ou, pour une urgence vitale justifiée par le médecin,
+ * dès la demande (le paiement régularise ensuite à la caisse).
+ */
+export async function releaseOrderIn(
+  tx: Tx,
+  ctx: RequestContext,
+  order: { id: string; number: string; patient_id: string },
+  releasedBy: { userId: string; name: string | null },
+  mode: "payment" | "emergency" = "payment",
+): Promise<void> {
+  await tx.query(
+    `update orders.service_orders
+          set status = 'released', released_at = now(), released_by = $2, released_by_name = $3
+        where id = $1`,
+    [order.id, releasedBy.userId, releasedBy.name ?? null],
+  );
+
+  const departments = await tx.query<{ department_code: string }>(
+    "select distinct department_code from orders.service_order_items where order_id = $1 order by department_code",
+    [order.id],
+  );
+  const tickets: { ticketId: string; code: string; departmentCode: string }[] = [];
+  for (const { department_code } of departments.rows) {
+    const code = await nextNumber(
+      tx,
+      "orders",
+      `ticket:${department_code}`,
+      `T-${department_code}`,
+    );
+    const created = await tx.query<{ id: string }>(
+      `insert into orders.department_tickets (order_id, code, department_code, released_by, released_by_name)
+         values ($1, $2, $3, $4, $5) returning id`,
+      [order.id, code, department_code, releasedBy.userId, releasedBy.name ?? null],
+    );
+    tickets.push({
+      ticketId: (created.rows[0] as { id: string }).id,
+      code,
+      departmentCode: department_code,
+    });
+  }
+  await recordStep(
+    tx,
+    order.id,
+    "sent_to_departments",
+    { id: ctx.user.id, name: ctx.user.name, role: mode === "emergency" ? "doctor" : "system" },
+    {
+      tickets: tickets.map((t) => ({
+        code: t.code,
+        departmentCode: t.departmentCode,
+        payload: ticketPayload(t.code),
+      })),
+    },
+  );
+  await writeAudit(tx, ctx, {
+    action: mode === "emergency" ? "order.release-emergency" : "order.release",
+    entityType: "service_order",
+    entityId: order.id,
+    patientId: order.patient_id,
+    detail: {
+      number: order.number,
+      releasedBy: releasedBy.userId,
+      tickets: tickets.map((t) => t.code),
+    },
+  });
+  await appendEvent(tx, ctx, {
+    type: "ServiceOrderReleased",
+    patientId: order.patient_id,
+    payload: {
+      orderId: order.id,
+      orderNumber: order.number,
+      releasedBy: {
+        userId: releasedBy.userId,
+        ...(releasedBy.name ? { name: releasedBy.name } : {}),
+      },
+      tickets,
+    },
+  });
 }
 
 /* ------------------------------------------------------------------ lectures */

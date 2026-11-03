@@ -30,7 +30,7 @@ export async function findDuplicates(
   tx: Tx,
   nameNorm: string,
   birthDate: string,
-  phone: string,
+  phone: string | null,
 ): Promise<DuplicateCandidate[]> {
   const res = await tx.query<PatientRow & { score: number }>(
     `select ${PATIENT_COLUMNS}, similarity(name_norm, $1) as score
@@ -64,8 +64,8 @@ export async function createPatient(
   }
   const ageEstimated = input.birthDate === undefined;
   const birthDate = input.birthDate ?? birthFromAge(input.estimatedAge as number);
-  const digits = phoneDigits(input.phone);
-  if (digits.length < 3) {
+  const digits = input.phone === undefined ? null : phoneDigits(input.phone);
+  if (digits !== null && digits.length < 3) {
     throw new DomainError("validation_error", "Numéro de téléphone invalide.", 400);
   }
   const nameNorm = normalizeName(input.givenName, input.familyName);
@@ -103,7 +103,7 @@ export async function createPatient(
         input.sex,
         birthDate,
         ageEstimated,
-        input.phone,
+        input.phone ?? null,
         digits,
         nameNorm,
         ctx.user.id,

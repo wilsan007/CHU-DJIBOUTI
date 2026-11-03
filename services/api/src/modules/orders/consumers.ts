@@ -1,14 +1,13 @@
 import { writeAudit } from "../../audit/audit.ts";
-import { nextNumber } from "../../common/numbering.ts";
-import { appendEvent } from "../../events/outbox.ts";
 import type { Consumer } from "../../events/dispatcher.ts";
-import { ticketPayload, recordStep } from "./service.ts";
+import { recordStep, releaseOrderIn } from "./service.ts";
 
 interface LockedOrder {
   id: string;
   number: string;
   patient_id: string;
   status: "awaiting_payment" | "released" | "completed" | "cancelled";
+  emergency: boolean;
 }
 
 /**
@@ -24,7 +23,7 @@ export const releaseOnPayment: Consumer = {
       event.payload;
 
     const found = await tx.query<LockedOrder>(
-      "select id, number, patient_id, status from orders.service_orders where id = $1 for update",
+      "select id, number, patient_id, status, emergency from orders.service_orders where id = $1 for update",
       [orderId],
     );
     const order = found.rows[0];
@@ -39,7 +38,18 @@ export const releaseOnPayment: Consumer = {
       });
       return;
     }
-    if (order.status !== "awaiting_payment") return; // déjà libérée : rien à refaire
+    if (order.status !== "awaiting_payment") {
+      // Demande d'urgence déjà libérée : le paiement qui arrive la régularise (qui a encaissé, quand).
+      if (order.emergency)
+        await recordStep(tx, order.id, "emergency_regularized", cashier, {
+          invoiceNumber,
+          receiptNumber,
+          amount,
+          method,
+          paidAt,
+        });
+      return;
+    }
 
     await recordStep(tx, order.id, "payment_validated", cashier, {
       invoiceNumber,
@@ -48,72 +58,9 @@ export const releaseOnPayment: Consumer = {
       method,
       paidAt,
     });
-    await tx.query(
-      `update orders.service_orders
-          set status = 'released', released_at = now(), released_by = $2, released_by_name = $3
-        where id = $1`,
-      [order.id, validatedBy.userId, validatedBy.name ?? null],
-    );
-
-    const departments = await tx.query<{ department_code: string }>(
-      "select distinct department_code from orders.service_order_items where order_id = $1 order by department_code",
-      [order.id],
-    );
-    const tickets: { ticketId: string; code: string; departmentCode: string }[] = [];
-    for (const { department_code } of departments.rows) {
-      const code = await nextNumber(
-        tx,
-        "orders",
-        `ticket:${department_code}`,
-        `T-${department_code}`,
-      );
-      const created = await tx.query<{ id: string }>(
-        `insert into orders.department_tickets (order_id, code, department_code, released_by, released_by_name)
-         values ($1, $2, $3, $4, $5) returning id`,
-        [order.id, code, department_code, validatedBy.userId, validatedBy.name ?? null],
-      );
-      tickets.push({
-        ticketId: (created.rows[0] as { id: string }).id,
-        code,
-        departmentCode: department_code,
-      });
-    }
-    await recordStep(
-      tx,
-      order.id,
-      "sent_to_departments",
-      { id: ctx.user.id, name: ctx.user.name, role: "system" },
-      {
-        tickets: tickets.map((t) => ({
-          code: t.code,
-          departmentCode: t.departmentCode,
-          payload: ticketPayload(t.code),
-        })),
-      },
-    );
-    await writeAudit(tx, ctx, {
-      action: "order.release",
-      entityType: "service_order",
-      entityId: order.id,
-      patientId: order.patient_id,
-      detail: {
-        number: order.number,
-        releasedBy: validatedBy.userId,
-        tickets: tickets.map((t) => t.code),
-      },
-    });
-    await appendEvent(tx, ctx, {
-      type: "ServiceOrderReleased",
-      patientId: order.patient_id,
-      payload: {
-        orderId: order.id,
-        orderNumber: order.number,
-        releasedBy: {
-          userId: validatedBy.userId,
-          ...(validatedBy.name ? { name: validatedBy.name } : {}),
-        },
-        tickets,
-      },
+    await releaseOrderIn(tx, ctx, order, {
+      userId: validatedBy.userId,
+      name: validatedBy.name ?? null,
     });
   },
 };

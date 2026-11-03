@@ -36,6 +36,7 @@ start() {
 
   ( cd "$ROOT" && DATABASE_URL="postgres://chu_app:a$admin@127.0.0.1:$PG_PORT/chu" AUTH_ISSUER="http://localhost:$KC_PORT/realms/chu" AUTH_AUDIENCE=chu-api \
     AUTH_JWKS_URL="http://localhost:$KC_PORT/realms/chu/protocol/openid-connect/certs" PORT="$API_PORT" \
+    KEYCLOAK_ADMIN_URL="http://localhost:$KC_PORT" KEYCLOAK_ADMIN_CLIENT_SECRET="$kcadmin" \
     exec setsid nohup pnpm --filter @chu/api start > "$STACK_DIR/api.log" 2>&1 < /dev/null ) &
   ( cd "$ROOT/apps/portal" && API_URL="http://localhost:$API_PORT" exec setsid nohup pnpm dev > "$STACK_DIR/portal.log" 2>&1 < /dev/null ) &
   until curl -fs "http://localhost:$API_PORT/health" >/dev/null 2>&1; do sleep 1; done

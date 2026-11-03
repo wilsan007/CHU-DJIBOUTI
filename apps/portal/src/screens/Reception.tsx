@@ -123,7 +123,11 @@ function NewPatient({ onCreated }: { onCreated: (p: Patient) => void }): ReactNo
     try {
       const p = await api<Patient>("/api/patients", {
         method: "POST",
-        body: { ...form, ...(confirm ? { confirmNotDuplicate: true } : {}) },
+        body: {
+          ...form,
+          phone: form.phone.trim() || undefined,
+          ...(confirm ? { confirmNotDuplicate: true } : {}),
+        },
       });
       setCandidates([]);
       setOpen(false);
@@ -178,11 +182,7 @@ function NewPatient({ onCreated }: { onCreated: (p: Patient) => void }): ReactNo
       </label>
       <label>
         {t("reception.phone")}
-        <input
-          required
-          value={form.phone}
-          onChange={(e) => setForm({ ...form, phone: e.target.value })}
-        />
+        <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
       </label>
       <ErrorBox error={error} />
       {candidates.length > 0 && (
