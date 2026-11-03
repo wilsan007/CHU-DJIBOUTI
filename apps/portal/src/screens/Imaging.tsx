@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { accessToken } from "../auth.ts";
 import { api } from "../api.ts";
 import { label, t } from "../i18n.ts";
 import { ErrorBox, Notice } from "../ui.tsx";
@@ -28,9 +29,8 @@ const toBase64 = (buf: ArrayBuffer): string => {
 };
 
 export async function openImage(id: string): Promise<void> {
-  const token = (await import("../auth.ts")).accessToken;
   const res = await fetch(`/api/imaging/images/${id}`, {
-    headers: { authorization: `Bearer ${(await token()) ?? ""}` },
+    headers: { authorization: `Bearer ${(await accessToken()) ?? ""}` },
   });
   window.open(URL.createObjectURL(await res.blob()), "_blank");
 }
