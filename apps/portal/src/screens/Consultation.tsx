@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { api, ApiError } from "../api.ts";
+import { api, ApiError, can } from "../api.ts";
 import { label, t } from "../i18n.ts";
-import { ErrorBox, Notice } from "../ui.tsx";
+import { ErrorBox, Notice, confirmAction, ScrollTable } from "../ui.tsx";
 
 interface Vital {
   kind: string;
@@ -86,7 +86,9 @@ export function ConsultationPanel({
       />
       <Vitals consultation={consultation} disabled={closed} onChanged={load} />
       <Diagnoses consultation={consultation} disabled={closed} onChanged={load} />
-      {!closed && <Prescription patientId={patientId} consultationId={consultation.id} />}
+      {!closed && can("prescription:write") && (
+        <Prescription patientId={patientId} consultationId={consultation.id} />
+      )}
       {!closed && (
         <CloseButton
           consultationId={consultation.id}
@@ -562,61 +564,63 @@ function Prescription({
         ))}
       </ul>
       {lines.length > 0 && (
-        <table className="table">
-          <thead>
-            <tr>
-              <th />
-              <th>{t("rx.dose")}</th>
-              <th>{t("rx.perDay")}</th>
-              <th>{t("rx.days")}</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {lines.map((l, i) => (
-              <tr key={l.drug.code} data-rx-line={l.drug.code}>
-                <td>
-                  {l.drug.dci} {l.drug.strength}
-                </td>
-                <td>
-                  <input
-                    aria-label={`${t("rx.dose")} ${l.drug.code}`}
-                    inputMode="decimal"
-                    value={l.dose}
-                    onChange={(e) => update(i, { dose: e.target.value })}
-                  />
-                </td>
-                <td>
-                  <input
-                    aria-label={`${t("rx.perDay")} ${l.drug.code}`}
-                    inputMode="numeric"
-                    value={l.perDay}
-                    onChange={(e) => update(i, { perDay: e.target.value })}
-                  />
-                </td>
-                <td>
-                  <input
-                    aria-label={`${t("rx.days")} ${l.drug.code}`}
-                    inputMode="numeric"
-                    value={l.days}
-                    onChange={(e) => update(i, { days: e.target.value })}
-                  />
-                </td>
-                <td>
-                  <button
-                    className="ghost"
-                    onClick={() => {
-                      setLines(lines.filter((_, j) => j !== i));
-                      setAlerts(null);
-                    }}
-                  >
-                    {t("rx.remove")}
-                  </button>
-                </td>
+        <ScrollTable>
+          <table className="table">
+            <thead>
+              <tr>
+                <th />
+                <th>{t("rx.dose")}</th>
+                <th>{t("rx.perDay")}</th>
+                <th>{t("rx.days")}</th>
+                <th />
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {lines.map((l, i) => (
+                <tr key={l.drug.code} data-rx-line={l.drug.code}>
+                  <td>
+                    {l.drug.dci} {l.drug.strength}
+                  </td>
+                  <td>
+                    <input
+                      aria-label={`${t("rx.dose")} ${l.drug.code}`}
+                      inputMode="decimal"
+                      value={l.dose}
+                      onChange={(e) => update(i, { dose: e.target.value })}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      aria-label={`${t("rx.perDay")} ${l.drug.code}`}
+                      inputMode="numeric"
+                      value={l.perDay}
+                      onChange={(e) => update(i, { perDay: e.target.value })}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      aria-label={`${t("rx.days")} ${l.drug.code}`}
+                      inputMode="numeric"
+                      value={l.days}
+                      onChange={(e) => update(i, { days: e.target.value })}
+                    />
+                  </td>
+                  <td>
+                    <button
+                      className="ghost"
+                      onClick={() => {
+                        setLines(lines.filter((_, j) => j !== i));
+                        setAlerts(null);
+                      }}
+                    >
+                      {t("rx.remove")}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </ScrollTable>
       )}
       {alerts && alerts.length === 0 && <p className="muted">{t("rx.noAlerts")}</p>}
       {alerts?.map((a) => (
@@ -658,6 +662,7 @@ function CloseButton({
 }): ReactNode {
   const [error, setError] = useState<unknown>(null);
   const close = async (): Promise<void> => {
+    if (!confirmAction(t("confirm.closeConsult"))) return;
     setError(null);
     try {
       await api(`/api/consultations/${consultationId}/close`, { method: "POST" });

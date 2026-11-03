@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api } from "../api.ts";
 import { t } from "../i18n.ts";
-import { ErrorBox, Notice } from "../ui.tsx";
+import { ErrorBox, Notice, confirmAction } from "../ui.tsx";
 
 const ROLES = [
   "reception",
@@ -48,11 +48,11 @@ export function Admin(): ReactNode {
     void load();
   }, [load]);
 
-  const run = async (fn: () => Promise<string>): Promise<void> => {
+  const run = async (fn: () => Promise<string | undefined>): Promise<void> => {
     setError(null);
     setNotice("");
     try {
-      setNotice(await fn());
+      setNotice((await fn()) ?? "");
       await load();
     } catch (e) {
       setError(e);
@@ -94,6 +94,7 @@ export function Admin(): ReactNode {
                         disabled={(reasons[u.id] ?? "").trim().length < 3}
                         onClick={() =>
                           void run(async () => {
+                            if (!confirmAction(t("confirm.disableAccount"))) return undefined;
                             await api(`/api/admin/users/${u.id}/disable`, {
                               method: "POST",
                               body: { reason: reasons[u.id]?.trim() },

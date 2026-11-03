@@ -48,6 +48,8 @@ node apps/portal/e2e/lab-bridge.mjs     # automates ASTM/HL7 simulés → pont �
 node apps/portal/e2e/patient-portal.mjs   # espace patient /patient : code SMS, rendez-vous, résultats, factures (variables en tête du script)
 node apps/portal/e2e/caisse-qr.mjs        # carte et étiquette : QR photographié et décodé ; avoir et clôture de caisse
 node apps/portal/e2e/import-patients.mjs  # reprise de patients depuis le jeu fictif (essai, application, rejeu)
+node apps/portal/e2e/audit-ui.mjs         # accessibilité, erreurs, cibles tactiles : tous rôles, 4 modes
+node apps/portal/e2e/click-all.mjs        # clique tous les boutons activés de tous les rôles
 node apps/portal/e2e/direction-admin.mjs # tableau de bord de direction et administration des comptes
 ```
 

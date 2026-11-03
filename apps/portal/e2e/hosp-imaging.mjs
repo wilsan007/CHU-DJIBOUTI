@@ -224,7 +224,7 @@ try {
     .data;
   assert.equal(full.images.length, 1);
   // Le médecin lit le compte rendu dans le dossier du patient (lecture seule).
-  await doc.click("nav[aria-label='principal'] button:has-text('Médecin')");
+  await doc.click("nav[aria-label='principal'] button:has-text('Consultations')");
   await doc.locator("button.row", { hasText: `Radio Essai${suffix}` }).click();
   const rep = doc.locator("[data-imaging-report]");
   await rep.waitFor({ timeout: 15000 });

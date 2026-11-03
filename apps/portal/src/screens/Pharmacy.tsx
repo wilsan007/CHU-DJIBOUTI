@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, ApiError } from "../api.ts";
 import { t } from "../i18n.ts";
-import { ErrorBox, Notice } from "../ui.tsx";
+import { ErrorBox, Notice, ScrollTable } from "../ui.tsx";
 
 interface Summary {
   id: string;
@@ -100,7 +100,7 @@ function Prescriptions(): ReactNode {
           <button disabled={!scan.trim()} onClick={() => void verify()}>
             {t("pharmacy.verify.go")}
           </button>
-          {list.length === 0 && <p className="muted">{t("common.none")}</p>}
+          {list.length === 0 && <p className="muted empty">{t("pharmacy.empty")}</p>}
           <ul className="list">
             {list.map((p) => (
               <li key={p.id}>
@@ -130,7 +130,7 @@ function Prescriptions(): ReactNode {
               }}
             />
           ) : (
-            <p className="muted">{t("common.none")}</p>
+            <p className="muted empty">{t("pharmacy.pick")}</p>
           )}
         </div>
       </div>
@@ -224,39 +224,41 @@ function Dispense({ id, onDone }: { id: string; onDone: (message: string) => voi
           </ul>
         </div>
       )}
-      <table className="table">
-        <thead>
-          <tr>
-            <th>{t("pharmacy.line")}</th>
-            <th>{t("pharmacy.prescribed")}</th>
-            <th>{t("pharmacy.dispensed")}</th>
-            <th>{t("pharmacy.remaining")}</th>
-            {open && <th>{t("pharmacy.quantity")}</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {status.lines.map((l) => (
-            <tr key={l.lineNo} data-line={l.drugCode}>
-              <td>
-                {l.dci} {l.strength}
-              </td>
-              <td>{l.prescribed}</td>
-              <td>{l.dispensed}</td>
-              <td>{l.remaining}</td>
-              {open && (
-                <td>
-                  <input
-                    aria-label={`${t("pharmacy.quantity")} ${l.drugCode}`}
-                    inputMode="numeric"
-                    value={qty[l.lineNo] ?? ""}
-                    onChange={(e) => setQty({ ...qty, [l.lineNo]: e.target.value })}
-                  />
-                </td>
-              )}
+      <ScrollTable>
+        <table className="table">
+          <thead>
+            <tr>
+              <th>{t("pharmacy.line")}</th>
+              <th>{t("pharmacy.prescribed")}</th>
+              <th>{t("pharmacy.dispensed")}</th>
+              <th>{t("pharmacy.remaining")}</th>
+              {open && <th>{t("pharmacy.quantity")}</th>}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {status.lines.map((l) => (
+              <tr key={l.lineNo} data-line={l.drugCode}>
+                <td>
+                  {l.dci} {l.strength}
+                </td>
+                <td>{l.prescribed}</td>
+                <td>{l.dispensed}</td>
+                <td>{l.remaining}</td>
+                {open && (
+                  <td>
+                    <input
+                      aria-label={`${t("pharmacy.quantity")} ${l.drugCode}`}
+                      inputMode="numeric"
+                      value={qty[l.lineNo] ?? ""}
+                      onChange={(e) => setQty({ ...qty, [l.lineNo]: e.target.value })}
+                    />
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </ScrollTable>
       {open && (
         <>
           <label>

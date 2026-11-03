@@ -118,7 +118,7 @@ export function Imaging(): ReactNode {
     <section>
       <h1>{t("imaging.title")}</h1>
       <ErrorBox error={error} />
-      {open.length === 0 && <p className="muted">{t("common.none")}</p>}
+      {open.length === 0 && <p className="muted empty">{t("imaging.empty")}</p>}
       <div className="grid">
         {open.map((r) => (
           <RequestCard key={r.id} request={r} onChanged={load} />
@@ -162,10 +162,10 @@ function RequestCard({
   };
   return (
     <article className="card" data-exam={request.number}>
-      <h3>
+      <h2>
         {t("imaging.request", { number: request.number })}{" "}
         <span className="badge">{t(`imaging.status.${request.status}`)}</span>
-      </h3>
+      </h2>
       <p>
         <strong>{request.patient?.name}</strong>{" "}
         <span className="muted">

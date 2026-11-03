@@ -122,6 +122,7 @@ try {
   const card = cashier.locator(`[data-invoice='${invoiceNumber}']`);
   await card.waitFor();
   // Au-delà du plafond de la caisse, la remise est refusée avec un message clair.
+  await card.locator("details.discount > summary").click(); // la remise est repliée par défaut
   await card.locator("input[placeholder='Remise en %']").fill("50");
   await card.locator("input[placeholder='Motif']").fill("Personnel du CHU");
   await card.locator("button:has-text('Appliquer')").click();

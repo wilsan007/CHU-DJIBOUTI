@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, type Me } from "../api.ts";
 import { label, t } from "../i18n.ts";
-import { ErrorBox, Notice } from "../ui.tsx";
+import { ErrorBox, Notice, ScrollTable } from "../ui.tsx";
 
 export interface Item {
   code: string;
@@ -273,46 +273,48 @@ function Levels(): ReactNode {
             ))}
           </select>
         </label>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>{t("stock.item")}</th>
-              <th>{t("stock.lot")}</th>
-              <th>{t("stock.expires")}</th>
-              <th>{t("stock.quantity")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {lots.map((l) => (
-              <tr key={`${l.lotId}-${l.depot}`} data-lot={l.lotNumber} data-depot={l.depot}>
-                <td>
-                  {label(l.labelFr, l.labelAr)}{" "}
-                  <span className="muted">{t(`stock.kind.${l.kind}`)}</span>
-                </td>
-                <td>
-                  {l.lotNumber} ({l.depot})
-                </td>
-                <td>
-                  {l.expiresOn}{" "}
-                  <span
-                    className={
-                      l.status === "ok"
-                        ? "flag ok"
-                        : l.status === "expiring"
-                          ? "flag abnormal"
-                          : "flag critical"
-                    }
-                  >
-                    {t(`stock.expiry.${l.status}`)}
-                  </span>
-                </td>
-                <td>
-                  {l.quantity} {l.unit}
-                </td>
+        <ScrollTable>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{t("stock.item")}</th>
+                <th>{t("stock.lot")}</th>
+                <th>{t("stock.expires")}</th>
+                <th>{t("stock.quantity")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {lots.map((l) => (
+                <tr key={`${l.lotId}-${l.depot}`} data-lot={l.lotNumber} data-depot={l.depot}>
+                  <td>
+                    {label(l.labelFr, l.labelAr)}{" "}
+                    <span className="muted">{t(`stock.kind.${l.kind}`)}</span>
+                  </td>
+                  <td>
+                    {l.lotNumber} ({l.depot})
+                  </td>
+                  <td>
+                    {l.expiresOn}{" "}
+                    <span
+                      className={
+                        l.status === "ok"
+                          ? "flag ok"
+                          : l.status === "expiring"
+                            ? "flag abnormal"
+                            : "flag critical"
+                      }
+                    >
+                      {t(`stock.expiry.${l.status}`)}
+                    </span>
+                  </td>
+                  <td>
+                    {l.quantity} {l.unit}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </ScrollTable>
       </div>
     </div>
   );
@@ -379,7 +381,7 @@ function Receive(): ReactNode {
       {item ? (
         <p data-picked={item.code}>
           <strong>{item.code}</strong> {label(item.labelFr, item.labelAr)}{" "}
-          <button className="ghost" onClick={() => setItem(null)}>
+          <button className="ghost" aria-label={t("common.remove")} onClick={() => setItem(null)}>
             ×
           </button>
         </p>
@@ -577,37 +579,43 @@ function Recipes(): ReactNode {
           ))}
         </select>
       </label>
-      <table className="table" data-recipe={act}>
-        <tbody>
-          {lines.map((l, i) => (
-            <tr key={l.itemCode} data-line={l.itemCode}>
-              <td>
-                {l.itemCode} {l.labelFr}
-              </td>
-              <td>
-                <input
-                  aria-label={`${t("stock.quantity")} ${l.itemCode}`}
-                  inputMode="numeric"
-                  value={l.quantity}
-                  onChange={(e) =>
-                    setLines(
-                      lines.map((x, j) =>
-                        j === i ? { ...x, quantity: Number(e.target.value) || 0 } : x,
-                      ),
-                    )
-                  }
-                />
-              </td>
-              <td>
-                <button className="ghost" onClick={() => setLines(lines.filter((_, j) => j !== i))}>
-                  ×
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <h3>{t("stock.recipes.add")}</h3>
+      <ScrollTable>
+        <table className="table" data-recipe={act}>
+          <tbody>
+            {lines.map((l, i) => (
+              <tr key={l.itemCode} data-line={l.itemCode}>
+                <td>
+                  {l.itemCode} {l.labelFr}
+                </td>
+                <td>
+                  <input
+                    aria-label={`${t("stock.quantity")} ${l.itemCode}`}
+                    inputMode="numeric"
+                    value={l.quantity}
+                    onChange={(e) =>
+                      setLines(
+                        lines.map((x, j) =>
+                          j === i ? { ...x, quantity: Number(e.target.value) || 0 } : x,
+                        ),
+                      )
+                    }
+                  />
+                </td>
+                <td>
+                  <button
+                    className="ghost"
+                    aria-label={t("common.remove")}
+                    onClick={() => setLines(lines.filter((_, j) => j !== i))}
+                  >
+                    ×
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </ScrollTable>
+      <h2>{t("stock.recipes.add")}</h2>
       <ItemPicker
         onPick={(i) =>
           !lines.some((l) => l.itemCode === i.code) &&
@@ -735,18 +743,20 @@ function Items(): ReactNode {
         </button>
       </div>
       <div className="card">
-        <table className="table">
-          <tbody>
-            {items.map((i) => (
-              <tr key={i.code}>
-                <td>{i.code}</td>
-                <td>{label(i.labelFr, i.labelAr)}</td>
-                <td>{t(`stock.kind.${i.kind}`)}</td>
-                <td>{i.unit}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <ScrollTable>
+          <table className="table">
+            <tbody>
+              {items.map((i) => (
+                <tr key={i.code}>
+                  <td>{i.code}</td>
+                  <td>{label(i.labelFr, i.labelAr)}</td>
+                  <td>{t(`stock.kind.${i.kind}`)}</td>
+                  <td>{i.unit}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </ScrollTable>
       </div>
     </div>
   );

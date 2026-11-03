@@ -156,6 +156,31 @@ try {
   await agent.locator("[data-leave-status='approved']").waitFor();
   await shot(agent, "42-mon-espace");
 
+  // Deux autres demandes : l'agent en annule une lui-même, les ressources humaines refusent l'autre (motif).
+  const ask = async (from, to, why) => {
+    await agent.locator("label:text-is('Du') input").fill(day(from));
+    await agent.locator("label:text-is('Au') input").fill(day(to));
+    await agent.locator("label:text-is('Motif') input").fill(why);
+    await agent.click("button:has-text('Demander le congé')");
+    await agent.locator("[role=status]:has-text('Demande envoyée')").waitFor();
+  };
+  await ask(20, 21, "Congé à annuler");
+  await agent
+    .locator("[data-leave-status='requested'] button:has-text('Annuler la demande')")
+    .click();
+  await agent.locator("[data-leave-status='cancelled']").waitFor();
+  await ask(30, 31, "Congé à refuser");
+  await hr.click("[data-tab='members']");
+  await hr.click("[data-tab='leaves']");
+  const toRefuse = hr.locator(`[data-leave='Docteure Essai${suffix}']`);
+  await toRefuse.waitFor();
+  await toRefuse.locator("input").fill("Période de forte activité");
+  await toRefuse.locator("button:has-text('Refuser')").click();
+  await toRefuse.waitFor({ state: "detached" });
+  await agent.reload();
+  await agent.locator("nav[aria-label='principal'] button:has-text('Mon espace')").click();
+  await agent.locator("[data-leave-status='rejected']").waitFor();
+
   /* ------------------------------------------------ suspension : le compte est coupé tout de suite */
   await hr.click("[data-tab='members']");
   await hr.fill("input[aria-label='Nom ou matricule']", doc);

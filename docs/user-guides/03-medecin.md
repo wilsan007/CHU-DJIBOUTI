@@ -2,7 +2,7 @@
 
 ## Français
 
-**Écran : « Médecin » → « File d'attente de consultation »**
+**Écran : « Consultations » → « File d'attente de consultation »**
 
 1. **Appeler** le patient suivant (ou **Ouvrir** son dossier). Lisez en haut : **allergies**, historique, résultats validés,
    comptes rendus d'imagerie, messages du laboratoire.
@@ -26,7 +26,7 @@ le délai fixé, le système prévient le responsable désigné.
 
 ## العربية
 
-**الشاشة: «الطبيب» ← «طابور الاستشارة»**
+**الشاشة: «الاستشارات» ← «طابور الاستشارة»**
 
 ١. **نادِ** المريض التالي (أو **افتح** ملفه). اقرأ في الأعلى: **الحساسيات**، السوابق، النتائج المصادَق عليها، تقارير التصوير،
 رسائل المختبر.

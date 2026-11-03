@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, type Me } from "../api.ts";
 import { label, t } from "../i18n.ts";
-import { ErrorBox, fdj, Notice } from "../ui.tsx";
+import { ErrorBox, fdj, Notice, confirmAction } from "../ui.tsx";
 
 const NIGHT_ACT = "HOSP-1J";
 
@@ -121,7 +121,7 @@ function Stays({
     <div className="cols">
       <div className="card">
         <ErrorBox error={error} />
-        {list.length === 0 && <p className="muted">{t("common.none")}</p>}
+        {list.length === 0 && <p className="muted empty">{t("hosp.emptyStays")}</p>}
         <ul className="list">
           {list.map((s) => (
             <li key={s.id}>
@@ -142,7 +142,7 @@ function Stays({
         {selected ? (
           <StayPanel key={selected} id={selected} me={me} onChanged={load} />
         ) : (
-          <p className="muted">{t("common.none")}</p>
+          <p className="muted empty">{t("hosp.pickStay")}</p>
         )}
       </div>
     </div>
@@ -165,7 +165,7 @@ function Beds(): ReactNode {
     <div className="grid">
       {beds.map((b) => (
         <article key={b.code} className="card" data-bed={b.code} data-occupied={b.occupied}>
-          <h3>{b.label}</h3>
+          <h2>{b.label}</h2>
           <p className={b.occupied ? "warn" : "muted"}>
             {b.occupied
               ? `${b.stay?.patient?.name ?? ""} · ${b.stay?.number ?? ""}`
@@ -367,6 +367,7 @@ function StayPanel({
               className="primary"
               onClick={() =>
                 void run(async () => {
+                  if (!confirmAction(t("confirm.discharge"))) return undefined;
                   const r = await api<{ finalInvoiceId: string | null }>(
                     `/api/stays/${id}/discharge`,
                     { method: "POST" },
@@ -408,6 +409,7 @@ function StayPanel({
                 className="primary"
                 onClick={() =>
                   void run(async () => {
+                    if (!confirmAction(t("confirm.exit"))) return undefined;
                     await api(`/api/stays/${id}/exit`, {
                       method: "POST",
                       body: reason.trim() ? { unpaidReason: reason.trim() } : {},
@@ -483,10 +485,12 @@ function NewStay({ onCreated }: { onCreated: (id: string) => void }): ReactNode 
         </select>
       </label>
       <p>
-        <input type="checkbox" checked disabled /> {t("hosp.new.firstNight")}{" "}
-        {night && <span className="muted">· {night.tariff} FDJ</span>}
+        <label>
+          <input type="checkbox" checked disabled /> {t("hosp.new.firstNight")}{" "}
+          {night && <span className="muted">· {night.tariff} FDJ</span>}
+        </label>
       </p>
-      <h3>{t("hosp.new.initialActs")}</h3>
+      <h2>{t("hosp.new.initialActs")}</h2>
       <ul className="checks">
         {acts
           .filter(

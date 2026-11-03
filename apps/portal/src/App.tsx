@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { api, type Me } from "./api.ts";
+import { api, rememberMe, type Me } from "./api.ts";
 import { manager } from "./auth.ts";
 import { setLang, t, useLang } from "./i18n.ts";
 import { Cashier } from "./screens/Cashier.tsx";
@@ -15,7 +15,7 @@ import { Material } from "./screens/Material.tsx";
 import { Stock } from "./screens/Stock.tsx";
 import { Pharmacy } from "./screens/Pharmacy.tsx";
 import { Reception } from "./screens/Reception.tsx";
-import { ErrorBox } from "./ui.tsx";
+import { ErrorBox, ProgressBar } from "./ui.tsx";
 
 interface Screen {
   id: string;
@@ -85,16 +85,28 @@ export function App(): ReactNode {
   const [current, setCurrent] = useState<string | null>(null);
 
   useEffect(() => {
-    api<Me>("/api/me").then(setMe).catch(setError);
+    api<Me>("/api/me")
+      .then((m) => {
+        rememberMe(m);
+        setMe(m);
+      })
+      .catch(setError);
   }, []);
 
   const allowed = me
     ? SCREENS.filter((s) => me.permissions.includes(s.permission) && (s.visible?.(me) ?? true))
     : [];
   const screen = allowed.find((s) => s.id === current) ?? allowed[0];
+  useEffect(() => {
+    document.title = screen ? `${t(screen.label)} · ${t("app.name")}` : t("app.name");
+  }, [screen, lang]);
 
   return (
     <div className="shell" data-lang={lang}>
+      <a className="skip" href="#contenu">
+        {t("common.skip")}
+      </a>
+      <ProgressBar />
       <EnvBanner />
       <header className="bar">
         <strong className="brand">{t("app.name")}</strong>
@@ -103,7 +115,12 @@ export function App(): ReactNode {
             <button
               key={s.id}
               className={s.id === screen?.id ? "tab active" : "tab"}
-              onClick={() => setCurrent(s.id)}
+              aria-current={s.id === screen?.id ? "page" : undefined}
+              onClick={() => {
+                setCurrent(s.id);
+                // Le clavier et les lecteurs d'écran reprennent au début du nouvel écran.
+                setTimeout(() => document.getElementById("contenu")?.focus(), 0);
+              }}
             >
               {t(s.label)}
             </button>
@@ -118,7 +135,7 @@ export function App(): ReactNode {
           {t("nav.logout")}
         </button>
       </header>
-      <main>
+      <main id="contenu" tabIndex={-1}>
         <ErrorBox error={error} />
         {me && !screen && <p>{t("common.noAccess")}</p>}
         {me && screen?.render(me)}

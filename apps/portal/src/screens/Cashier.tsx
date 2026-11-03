@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api } from "../api.ts";
 import { t } from "../i18n.ts";
-import { ErrorBox, fdj, Notice } from "../ui.tsx";
+import { ErrorBox, fdj, Notice, confirmAction } from "../ui.tsx";
 
 interface Invoice {
   id: string;
@@ -17,6 +17,7 @@ export function Cashier(): ReactNode {
   const [session, setSession] = useState<{ id: string } | null | undefined>(undefined);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [paid, setPaid] = useState<Invoice[]>([]);
+  const [filter, setFilter] = useState("");
   const [error, setError] = useState<unknown>(null);
   const [notice, setNotice] = useState("");
 
@@ -40,6 +41,15 @@ export function Cashier(): ReactNode {
     return () => clearInterval(timer);
   }, [load]);
 
+  const needle = filter.trim().toLowerCase();
+  const shown = invoices.filter(
+    (i) =>
+      !needle ||
+      `${i.number} ${i.patient?.name ?? ""} ${i.patient?.identifier ?? ""} ${i.orderNumber ?? ""}`
+        .toLowerCase()
+        .includes(needle),
+  );
+
   const open = async (): Promise<void> => {
     setError(null);
     try {
@@ -56,9 +66,12 @@ export function Cashier(): ReactNode {
       <ErrorBox error={error} />
       <Notice>{notice}</Notice>
       {session === null && (
-        <button className="primary" onClick={() => void open()}>
-          {t("cashier.openSession")}
-        </button>
+        <div className="notice" data-no-session>
+          <p>{t("cashier.needSession")}</p>
+          <button className="primary" onClick={() => void open()}>
+            {t("cashier.openSession")}
+          </button>
+        </div>
       )}
       {session && <p className="muted">{t("cashier.sessionOpen")}</p>}
       {session && (
@@ -70,9 +83,24 @@ export function Cashier(): ReactNode {
           }}
         />
       )}
-      {invoices.length === 0 && <p className="muted">{t("common.none")}</p>}
+      <div className="inline" data-cashier-bar>
+        <input
+          type="search"
+          aria-label={t("cashier.filter")}
+          placeholder={t("cashier.filter")}
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        />
+        <p className="muted">
+          {t("cashier.count", {
+            n: shown.length,
+            total: fdj(shown.reduce((a, i) => a + i.amountDue, 0)),
+          })}
+        </p>
+      </div>
+      {invoices.length === 0 && <p className="muted empty">{t("cashier.empty")}</p>}
       <div className="grid">
-        {invoices.map((inv) => (
+        {shown.map((inv) => (
           <InvoiceCard
             key={inv.id}
             invoice={inv}
@@ -116,6 +144,7 @@ function CloseSession({
   const [counted, setCounted] = useState("");
   const [error, setError] = useState<unknown>(null);
   const close = async (): Promise<void> => {
+    if (!confirmAction(t("confirm.closeCash", { counted }))) return;
     setError(null);
     try {
       const r = await api<{ expectedCash: number; countedCash: number; difference: number }>(
@@ -163,6 +192,7 @@ function PaidRow({
   const [reason, setReason] = useState("");
   const [error, setError] = useState<unknown>(null);
   const credit = async (): Promise<void> => {
+    if (!confirmAction(t("confirm.credit", { number: invoice.number }))) return;
     setError(null);
     try {
       const r = await api<{ creditNote: { number: string } }>(
@@ -262,24 +292,27 @@ function InvoiceCard({
           </span>
         )}
       </p>
-      <div className="inline">
-        <input
-          aria-label={t("cashier.discountPercent")}
-          placeholder={t("cashier.discountPercent")}
-          inputMode="decimal"
-          value={percent}
-          onChange={(e) => setPercent(e.target.value)}
-        />
-        <input
-          aria-label={t("common.reason")}
-          placeholder={t("common.reason")}
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-        />
-        <button onClick={() => void discount()} disabled={!percent || reason.trim().length < 3}>
-          {t("cashier.apply")}
-        </button>
-      </div>
+      <details className="discount">
+        <summary>{t("cashier.discount")}</summary>
+        <div className="inline">
+          <input
+            aria-label={t("cashier.discountPercent")}
+            placeholder={t("cashier.discountPercent")}
+            inputMode="decimal"
+            value={percent}
+            onChange={(e) => setPercent(e.target.value)}
+          />
+          <input
+            aria-label={t("common.reason")}
+            placeholder={t("common.reason")}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+          />
+          <button onClick={() => void discount()} disabled={!percent || reason.trim().length < 3}>
+            {t("cashier.apply")}
+          </button>
+        </div>
+      </details>
       <div className="inline">
         <select
           aria-label={t("cashier.method")}
@@ -290,8 +323,13 @@ function InvoiceCard({
           <option value="mobile">{t("cashier.method.mobile")}</option>
           <option value="card">{t("cashier.method.card")}</option>
         </select>
-        <button className="primary" disabled={!canPay} onClick={() => void pay()}>
-          {t("cashier.pay")}
+        <button
+          className="primary"
+          disabled={!canPay}
+          title={canPay ? undefined : t("cashier.needSession")}
+          onClick={() => void pay()}
+        >
+          {t("cashier.pay")} {fdj(invoice.amountDue)}
         </button>
       </div>
       <ErrorBox error={error} />

@@ -1,11 +1,28 @@
+/* global axe */
 // Espace patient dans un vrai navigateur : le code arrive par la VRAIE passerelle SMS HTTP du noyau (ici un serveur de
 // test), connexion, prise et annulation de rendez-vous, résultats (valeur critique retenue), factures, arabe, mobile.
 // Prérequis : l'API démarrée avec PORTAL_JWT_SECRET, SMS_GATEWAY_URL=http://127.0.0.1:4599/sms,
 // SMS_GATEWAY_AUTHORIZATION="Bearer passerelle-essai" et PORTAL_RESULT_DELAY_HOURS=0.
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { api, cardPayload, chromium, importCatalogs, PORTAL, shot, sleep } from "./lib.mjs";
 
+const AXE = readFileSync(createRequire(import.meta.url).resolve("axe-core/axe.min.js"), "utf8");
+/** Accessibilité (axe-core) de la vue courante : aucune violation sérieuse ou critique. */
+async function axeCheck(page, where) {
+  await page.addScriptTag({ content: AXE });
+  const v = await page.evaluate(async () => {
+    const r = await axe.run(document, {
+      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "best-practice"] },
+    });
+    return r.violations
+      .filter((x) => ["serious", "critical", "moderate"].includes(x.impact))
+      .map((x) => `${x.id}: ${x.nodes[0]?.html.slice(0, 80)}`);
+  });
+  assert.deepEqual(v, [], `accessibilité (${where})`);
+}
 const suffix = String(Date.now()).slice(-6);
 const messages = [];
 const gateway = createServer((req, res) => {
@@ -162,8 +179,10 @@ try {
 
   const ctx = await browser.newContext({ viewport: { width: 1000, height: 900 } });
   const page = await ctx.newPage();
+  page.on("dialog", (d) => void d.accept());
   await page.goto(`${PORTAL}/patient`);
   await page.waitForSelector("[data-patient-login]");
+  await axeCheck(page, "connexion");
   await shot(page, "patient-1-login");
 
   // Dossier inconnu : même écran, aucun SMS.
@@ -203,6 +222,7 @@ try {
   await slot.waitFor();
   await slot.click();
   await page.locator("[data-appointment]").first().waitFor();
+  await axeCheck(page, "rendez-vous");
   await shot(page, "patient-2-appointments");
   const mine = await page.locator("[data-appointment]").count();
   assert.equal(mine, 1);
@@ -219,6 +239,7 @@ try {
     "valeur critique jamais affichée",
   );
   await page.locator("[data-withheld]").waitFor();
+  await axeCheck(page, "résultats");
   await shot(page, "patient-3-results");
   console.log(
     "  ✔ résultat normal affiché, valeur critique retenue avec invitation à contacter le médecin",

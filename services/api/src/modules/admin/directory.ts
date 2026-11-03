@@ -1,3 +1,4 @@
+import { DomainError } from "../../errors.ts";
 import type { Role } from "../../auth/permissions.ts";
 
 /** Annuaire des comptes (Keycloak). Le registre local reste la référence pour couper un accès immédiatement. */
@@ -49,7 +50,21 @@ export function keycloakDirectory(o: KeycloakAdminOptions): UserDirectory {
         ...(init.headers ?? {}),
       },
     });
-    if (!res.ok) throw new Error(`Keycloak ${init.method ?? "GET"} ${path} : ${res.status}`);
+    if (res.status === 404 && path.startsWith("/users/"))
+      throw new DomainError(
+        "account_not_in_directory",
+        "Ce compte n'existe plus dans l'annuaire de connexion (supprimé directement dans Keycloak ?). Désactivez-le ici pour couper l'accès.",
+        409,
+      );
+    if (!res.ok) {
+      // Détail technique pour le journal du service ; message clair pour l'utilisateur.
+      console.error(`Keycloak ${init.method ?? "GET"} ${path} : ${res.status}`);
+      throw new DomainError(
+        "directory_error",
+        "L'annuaire des comptes a refusé l'opération. Réessayez ; si cela continue, prévenez la DSI.",
+        502,
+      );
+    }
     return res;
   };
   const realmRole = async (name: string) =>

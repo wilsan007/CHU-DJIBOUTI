@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ApiError } from "../api.ts";
 import { label, setLang, t, useLang } from "../i18n.ts";
-import { ErrorBox, fdj, Notice } from "../ui.tsx";
+import { confirmAction, ErrorBox, fdj, Notice, ProgressBar } from "../ui.tsx";
 import { EnvBanner } from "../App.tsx";
 import { getToken, papi, setToken } from "./patientApi.ts";
 
@@ -43,6 +43,10 @@ export function PatientApp(): ReactNode {
   );
   return (
     <div className="shell patient">
+      <a className="skip" href="#contenu">
+        {t("common.skip")}
+      </a>
+      <ProgressBar />
       <EnvBanner />
       <header className="bar">
         <strong className="brand">{t("patient.brand")}</strong>
@@ -60,7 +64,7 @@ export function PatientApp(): ReactNode {
           </button>
         )}
       </header>
-      <main>
+      <main id="contenu" tabIndex={-1}>
         {signedIn ? (
           <Home onExpired={() => (setToken(null), setSignedIn(false))} />
         ) : (
@@ -263,6 +267,7 @@ function Appointments({ onExpired }: { onExpired: () => void }): ReactNode {
               {a.status === "booked" && (
                 <button
                   onClick={() =>
+                    confirmAction(t("confirm.cancelAppt")) &&
                     void act(
                       () => papi(`/api/portal/me/appointments/${a.id}/cancel`, { body: {} }),
                       t("patient.appointments.cancelled"),

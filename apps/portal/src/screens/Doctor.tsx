@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { api } from "../api.ts";
+import { api, can } from "../api.ts";
 import { label, t } from "../i18n.ts";
 import { ErrorBox, Notice } from "../ui.tsx";
 import { ConsultationPanel } from "./Consultation.tsx";
@@ -79,10 +79,10 @@ export function Doctor(): ReactNode {
       <h1>{t("doctor.title")}</h1>
       <ErrorBox error={error} />
       <Notice>{notice}</Notice>
-      <Notifications />
+      {can("lab:read") && <Notifications />}
       <div className="cols">
         <div className="card">
-          {queue.length === 0 && <p className="muted">{t("common.none")}</p>}
+          {queue.length === 0 && <p className="muted empty">{t("doctor.emptyQueue")}</p>}
           <ul className="list">
             {queue
               .filter(
@@ -109,7 +109,7 @@ export function Doctor(): ReactNode {
           {selected ? (
             <PatientPanel key={selected.id} entry={selected} onSent={setNotice} />
           ) : (
-            <p className="muted">{t("common.none")}</p>
+            <p className="muted empty">{t("doctor.pickPatient")}</p>
           )}
         </div>
       </div>
@@ -200,9 +200,9 @@ function PatientPanel({ entry, onSent }: { entry: Entry; onSent: (m: string) => 
       {entry.encounterId && (
         <ConsultationPanel patientId={entry.patientId} encounterId={entry.encounterId} />
       )}
-      <Results patientId={entry.patientId} />
-      <ImagingReports patientId={entry.patientId} />
-      <OrderForm entry={entry} onSent={onSent} />
+      {can("lab:read") && <Results patientId={entry.patientId} />}
+      {can("imaging:read") && <ImagingReports patientId={entry.patientId} />}
+      {can("order:place") && <OrderForm entry={entry} onSent={onSent} />}
     </div>
   );
 }
@@ -356,15 +356,19 @@ function OrderForm({ entry, onSent }: { entry: Entry; onSent: (m: string) => voi
           </li>
         ))}
       </ul>
-      <label className="checks">
-        <input
-          type="checkbox"
-          checked={emergency}
-          onChange={(e) => setEmergency(e.target.checked)}
-          data-emergency
-        />
-        {t("doctor.emergency")}
-      </label>
+      <ul className={emergency ? "checks emergency on" : "checks emergency"}>
+        <li>
+          <label>
+            <input
+              type="checkbox"
+              checked={emergency}
+              onChange={(e) => setEmergency(e.target.checked)}
+              data-emergency
+            />
+            {t("doctor.emergency")}
+          </label>
+        </li>
+      </ul>
       {emergency && (
         <label>
           {t("doctor.emergency.why")}

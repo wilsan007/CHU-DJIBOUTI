@@ -94,7 +94,7 @@ export function Lab({ me }: { me: Me }): ReactNode {
       <ErrorBox error={error} />
       <Notice>{notice}</Notice>
       <h2>{t("lab.toCollect")}</h2>
-      {toCollect.length === 0 && <p className="muted">{t("common.none")}</p>}
+      {toCollect.length === 0 && <p className="muted empty">{t("lab.emptyCollect")}</p>}
       <div className="grid">
         {toCollect.map((r) => (
           <CollectCard
@@ -108,7 +108,7 @@ export function Lab({ me }: { me: Me }): ReactNode {
         ))}
       </div>
       <h2>{t("lab.specimens")}</h2>
-      {active.length === 0 && <p className="muted">{t("common.none")}</p>}
+      {active.length === 0 && <p className="muted empty">{t("lab.emptySpecimens")}</p>}
       <div className="grid">
         {active.map((s) => (
           <SpecimenCard

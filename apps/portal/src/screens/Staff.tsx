@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, ApiError, type Me } from "../api.ts";
 import { label, t } from "../i18n.ts";
-import { ErrorBox, Notice } from "../ui.tsx";
+import { ErrorBox, Notice, confirmAction, ScrollTable } from "../ui.tsx";
 
 const CATEGORIES = [
   "physician",
@@ -495,6 +495,8 @@ function MemberPanel({
               disabled={status.reason.trim().length < 3}
               onClick={() =>
                 void run(async () => {
+                  if (status.status !== "active" && !confirmAction(t("confirm.staffStatus")))
+                    return;
                   const r = await api<{ removedShifts: number; account: string | null }>(
                     `/api/staff/${id}/status`,
                     {
@@ -647,31 +649,33 @@ function Roster(): ReactNode {
           {t("staff.roster.from")}
           <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
         </label>
-        <h3>{t("staff.roster.onDuty")}</h3>
+        <h2>{t("staff.roster.onDuty")}</h2>
         <ul className="plain" data-onduty>
           {duty.map((d) => (
             <li key={d.id}>{d.name}</li>
           ))}
         </ul>
-        <table className="table" data-roster>
-          <tbody>
-            {shifts.map((s) => (
-              <tr key={s.id} data-shift={s.name}>
-                <td>{localDay(s.startsAt)}</td>
-                <td>
-                  {localHour(s.startsAt)}–{localHour(s.endsAt)}
-                </td>
-                <td>{s.name}</td>
-                <td>{t(`staff.roster.kind.${s.kind}`)}</td>
-                <td>
-                  <button className="ghost" onClick={() => void remove(s.id)}>
-                    {t("staff.roster.remove")}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <ScrollTable>
+          <table className="table" data-roster>
+            <tbody>
+              {shifts.map((s) => (
+                <tr key={s.id} data-shift={s.name}>
+                  <td>{localDay(s.startsAt)}</td>
+                  <td>
+                    {localHour(s.startsAt)}–{localHour(s.endsAt)}
+                  </td>
+                  <td>{s.name}</td>
+                  <td>{t(`staff.roster.kind.${s.kind}`)}</td>
+                  <td>
+                    <button className="ghost" onClick={() => void remove(s.id)}>
+                      {t("staff.roster.remove")}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </ScrollTable>
       </div>
       <div className="card form">
         <Notice>{notice}</Notice>

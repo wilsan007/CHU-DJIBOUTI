@@ -99,7 +99,7 @@ export function Material(): ReactNode {
         {item ? (
           <p data-picked={item.code}>
             <strong>{item.code}</strong> {label(item.labelFr, item.labelAr)}{" "}
-            <button className="ghost" onClick={() => setItem(null)}>
+            <button className="ghost" aria-label={t("common.remove")} onClick={() => setItem(null)}>
               ×
             </button>
           </p>
@@ -114,7 +114,11 @@ export function Material(): ReactNode {
           <p data-patient={patient.identifier}>
             {patient.givenName} {patient.familyName}{" "}
             <span className="muted">{patient.identifier}</span>{" "}
-            <button className="ghost" onClick={() => setPatient(null)}>
+            <button
+              className="ghost"
+              aria-label={t("common.remove")}
+              onClick={() => setPatient(null)}
+            >
               ×
             </button>
           </p>

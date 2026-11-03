@@ -181,7 +181,7 @@ try {
 
   // 4. Le médecin lit le compte rendu et voit l'image dans le dossier du patient.
   const doc = await login(browser, "dev-doctor");
-  await doc.click("nav[aria-label='principal'] button:has-text('Médecin')");
+  await doc.click("nav[aria-label='principal'] button:has-text('Consultations')");
   await doc.locator("button.row", { hasText: `Éssai${suffix}` }).click();
   const rep = doc.locator("[data-imaging-report]");
   await rep.waitFor({ timeout: 15000 });

@@ -103,7 +103,7 @@ export function Reception(): ReactNode {
           {selected ? (
             <Admission patient={selected} onDone={setNotice} />
           ) : (
-            <p className="muted">{t("common.none")}</p>
+            <p className="muted empty">{t("reception.empty")}</p>
           )}
         </div>
       </div>

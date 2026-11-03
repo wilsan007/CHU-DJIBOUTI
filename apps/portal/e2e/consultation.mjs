@@ -128,6 +128,26 @@ try {
   await doc.click("button:has-text('Garder ma version')");
   await doc.locator("[role=status]:has-text('Brouillon enregistré (version 4)')").waitFor();
 
+  // Second conflit : cette fois on reprend la version enregistrée par l'autre poste.
+  const latest = (
+    await api("dev-doctor", `/api/encounters/${adm.encounter.id}/consultation`, { expect: 200 })
+  ).data;
+  await api("dev-doctor", `/api/consultations/${latest.id}`, {
+    method: "PUT",
+    body: { expectedVersion: latest.version, notes: "Note de l'autre poste, à reprendre" },
+    expect: 200,
+  });
+  await panel.locator("label:has-text('Notes') textarea").fill("Ma note perdue");
+  await panel.locator("button:has-text('Enregistrer le brouillon')").click();
+  await doc.locator("[role=alert]:has-text('modifié entre-temps')").waitFor();
+  await doc.click("button:has-text('Reprendre la version enregistrée')");
+  await doc.locator("[role=alert]:has-text('modifié entre-temps')").waitFor({ state: "detached" });
+  assert.equal(
+    await panel.locator("label:has-text('Notes') textarea").inputValue(),
+    "Note de l'autre poste, à reprendre",
+    "la version de l'autre poste est reprise",
+  );
+
   // Constantes : normale, inhabituelle (confirmation), impossible (refusée).
   const vital = async (kind, value) => {
     await panel.locator("select[aria-label='Mesure']").selectOption(kind);

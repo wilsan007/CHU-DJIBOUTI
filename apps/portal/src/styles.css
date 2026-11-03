@@ -251,12 +251,13 @@ label textarea {
   gap: 8px;
   margin-block-end: 12px;
 }
+.scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
 .table {
   width: 100%;
   border-collapse: collapse;
-  display: block;
-  max-width: 100%;
-  overflow-x: auto;
 }
 .table th,
 .table td {
@@ -348,4 +349,205 @@ summary {
   text-align: center;
   font-weight: 700;
   padding: 6px 12px;
+}
+
+/* ---------- Ergonomie : en-tête fixe, retours visuels, clavier, mouvement réduit ---------- */
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.skip {
+  position: absolute;
+  inset-inline-start: 8px;
+  top: -60px;
+  background: var(--brand);
+  color: var(--brand-ink);
+  padding: 10px 14px;
+  border-radius: 8px;
+  z-index: 40;
+}
+.skip:focus {
+  top: 8px;
+}
+main:focus {
+  outline: none;
+}
+.progress {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  height: 3px;
+  z-index: 50;
+  background: linear-gradient(90deg, transparent, var(--brand), transparent);
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  animation: progress 1s linear infinite;
+}
+@keyframes progress {
+  from {
+    background-position: -40% 0;
+  }
+  to {
+    background-position: 140% 0;
+  }
+}
+button,
+input,
+select,
+textarea {
+  transition:
+    background-color 0.12s,
+    border-color 0.12s,
+    box-shadow 0.12s;
+}
+button:not(:disabled):hover {
+  border-color: var(--brand);
+}
+button.primary:not(:disabled):hover {
+  filter: brightness(1.08);
+}
+button.primary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+}
+summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding-block: 6px;
+}
+.card {
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+}
+.row:not(.active):hover {
+  background: color-mix(in srgb, var(--brand) 6%, var(--card));
+}
+.notice,
+.error {
+  scroll-margin-block: 80px;
+}
+@media (prefers-color-scheme: dark) {
+  .flag.ok {
+    background: #123d2a;
+    color: #8fe3b8;
+  }
+  .flag.abnormal {
+    background: #473612;
+    color: #f3cd7a;
+  }
+  .flag.critical {
+    background: #4a1a17;
+    color: #ffb4ab;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+@media print {
+  .bar,
+  .skip,
+  .progress,
+  .env-banner {
+    display: none;
+  }
+}
+
+/* Aucun champ ne doit dépasser son conteneur (téléphone) */
+input,
+select,
+textarea,
+button {
+  max-width: 100%;
+  min-width: 0;
+}
+.inline > * {
+  min-width: 0;
+}
+.inline select {
+  flex: 1 1 140px;
+}
+
+/* ---------- Finitions : repliables lisibles, états vides, urgence, barre mobile ---------- */
+details > summary {
+  list-style: none;
+  width: fit-content;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  padding: 6px 14px;
+  color: var(--ink);
+}
+details > summary::-webkit-details-marker {
+  display: none;
+}
+details > summary::before {
+  content: "▸";
+  margin-inline-end: 8px;
+  color: var(--brand);
+}
+details[open] > summary::before {
+  content: "▾";
+}
+details > summary:hover {
+  border-color: var(--brand);
+}
+details.discount {
+  margin-block: 4px;
+}
+.empty {
+  padding: 12px 4px;
+  line-height: 1.5;
+}
+.grid {
+  align-items: start;
+}
+.emergency li {
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+.emergency.on li {
+  border: 2px solid #c0392b;
+  background: color-mix(in srgb, #c0392b 8%, var(--card));
+}
+[data-cashier-bar] {
+  align-items: center;
+}
+[data-cashier-bar] input {
+  max-width: 420px;
+}
+@media (max-width: 640px) {
+  .bar {
+    flex-wrap: wrap;
+    padding: 6px 10px;
+    gap: 6px;
+  }
+  .bar nav {
+    order: 3;
+    flex: 1 0 100%;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    padding-block-end: 2px;
+    scrollbar-width: thin;
+  }
+  .bar nav .tab {
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+  .who {
+    display: none;
+  }
+  main {
+    padding: 12px;
+  }
 }

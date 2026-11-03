@@ -41,8 +41,14 @@ export async function api(user, path, { method = "GET", body, csv, expect } = {}
   return { status: res.status, data };
 }
 
-export async function login(browser, user, lang = "fr", viewport = { width: 1200, height: 900 }) {
-  const context = await browser.newContext({ viewport });
+export async function login(
+  browser,
+  user,
+  lang = "fr",
+  viewport = { width: 1200, height: 900 },
+  colorScheme = "light",
+) {
+  const context = await browser.newContext({ viewport, colorScheme });
   await context.addInitScript((l) => {
     try {
       localStorage.setItem("lang", l);
@@ -51,6 +57,7 @@ export async function login(browser, user, lang = "fr", viewport = { width: 1200
     }
   }, lang);
   const page = await context.newPage();
+  page.on("dialog", (d) => void d.accept()); // confirmations avant les actions graves
   await page.goto(PORTAL);
   await page.waitForSelector("#username");
   await page.fill("#username", user);
