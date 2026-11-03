@@ -1,0 +1,7 @@
+{
+  "name": "@chu/i18n",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Textes de l'interface en français et en arabe. Aucun texte en dur dans le code (plan, section 2)."
+}

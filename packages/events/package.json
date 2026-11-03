@@ -1,0 +1,11 @@
+{
+  "name": "@chu/events",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Schémas des événements échangés entre modules (étape 6.1 du plan)",
+  "dependencies": {
+    "zod": "^4.6.7"
+  },
+  "exports": "./src/index.ts"
+}

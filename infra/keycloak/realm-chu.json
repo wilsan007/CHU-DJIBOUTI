@@ -1,0 +1,407 @@
+{
+  "realm": "chu",
+  "enabled": true,
+  "displayName": "CHU de Djibouti",
+  "internationalizationEnabled": true,
+  "supportedLocales": ["fr", "ar"],
+  "defaultLocale": "fr",
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "accessTokenLifespan": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "roles": {
+    "realm": [
+      {
+        "name": "reception",
+        "description": "Rôle reception (voir services/api/src/auth/permissions.ts)"
+      },
+      {
+        "name": "cashier",
+        "description": "Rôle cashier (voir services/api/src/auth/permissions.ts)"
+      },
+      {
+        "name": "doctor",
+        "description": "Rôle doctor (voir services/api/src/auth/permissions.ts)"
+      },
+      {
+        "name": "nurse",
+        "description": "Rôle nurse (voir services/api/src/auth/permissions.ts)"
+      },
+      {
+        "name": "lab",
+        "description": "Rôle lab (voir services/api/src/auth/permissions.ts)"
+      },
+      {
+        "name": "biologist",
+        "description": "Rôle biologist (voir services/api/src/auth/permissions.ts)"
+      },
+      {
+        "name": "imaging",
+        "description": "Rôle imaging (voir services/api/src/auth/permissions.ts)"
+      },
+      {
+        "name": "pharmacy",
+        "description": "Rôle pharmacy (voir services/api/src/auth/permissions.ts)"
+      },
+      {
+        "name": "direction",
+        "description": "Rôle direction (voir services/api/src/auth/permissions.ts)"
+      },
+      {
+        "name": "admin",
+        "description": "Rôle admin (voir services/api/src/auth/permissions.ts)"
+      },
+      {
+        "name": "storekeeper",
+        "description": "Rôle storekeeper (voir services/api/src/auth/permissions.ts)"
+      },
+      {
+        "name": "hr",
+        "description": "Rôle hr (voir services/api/src/auth/permissions.ts)"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "chu-web",
+      "name": "Application web CHU",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "protocol": "openid-connect",
+      "redirectUris": ["http://localhost:8080/*"],
+      "webOrigins": ["http://localhost:8080"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "chu-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "chu-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ],
+      "fullScopeAllowed": false
+    },
+    {
+      "clientId": "chu-dev-cli",
+      "name": "DEV UNIQUEMENT : tests automatiques (mot de passe direct)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "name": "chu-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "chu-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ],
+      "fullScopeAllowed": false
+    },
+    {
+      "clientId": "chu-admin-api",
+      "name": "Gestion des comptes par l'API (compte de service)",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "${CHU_ADMIN_CLIENT_SECRET}",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocol": "openid-connect",
+      "fullScopeAllowed": false
+    }
+  ],
+  "users": [
+    {
+      "username": "dev-reception",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "dev-reception",
+      "lastName": "Fictif",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${CHU_DEV_USER_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["reception"],
+      "email": "dev-reception@chu.invalid"
+    },
+    {
+      "username": "dev-cashier",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "dev-cashier",
+      "lastName": "Fictif",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${CHU_DEV_USER_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["cashier"],
+      "email": "dev-cashier@chu.invalid"
+    },
+    {
+      "username": "dev-doctor",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "dev-doctor",
+      "lastName": "Fictif",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${CHU_DEV_USER_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["doctor"],
+      "email": "dev-doctor@chu.invalid"
+    },
+    {
+      "username": "dev-nurse",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "dev-nurse",
+      "lastName": "Fictif",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${CHU_DEV_USER_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["nurse"],
+      "email": "dev-nurse@chu.invalid"
+    },
+    {
+      "username": "dev-lab",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "dev-lab",
+      "lastName": "Fictif",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${CHU_DEV_USER_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["lab"],
+      "email": "dev-lab@chu.invalid"
+    },
+    {
+      "username": "dev-biologist",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "dev-biologist",
+      "lastName": "Fictif",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${CHU_DEV_USER_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["biologist"],
+      "email": "dev-biologist@chu.invalid"
+    },
+    {
+      "username": "dev-imaging",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "dev-imaging",
+      "lastName": "Fictif",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${CHU_DEV_USER_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["imaging"],
+      "email": "dev-imaging@chu.invalid"
+    },
+    {
+      "username": "dev-pharmacy",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "dev-pharmacy",
+      "lastName": "Fictif",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${CHU_DEV_USER_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["pharmacy"],
+      "email": "dev-pharmacy@chu.invalid"
+    },
+    {
+      "username": "dev-direction",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "dev-direction",
+      "lastName": "Fictif",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${CHU_DEV_USER_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["direction"],
+      "email": "dev-direction@chu.invalid"
+    },
+    {
+      "username": "dev-admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "dev-admin",
+      "lastName": "Fictif",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${CHU_DEV_USER_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["admin"],
+      "email": "dev-admin@chu.invalid"
+    },
+    {
+      "username": "dev-doctor2",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "dev-doctor2",
+      "lastName": "Fictif",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${CHU_DEV_USER_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["doctor"],
+      "email": "dev-doctor2@chu.invalid"
+    },
+    {
+      "username": "service-account-chu-admin-api",
+      "enabled": true,
+      "serviceAccountClientId": "chu-admin-api",
+      "clientRoles": {
+        "realm-management": ["manage-users", "view-users", "query-users", "view-realm"]
+      }
+    },
+    {
+      "username": "dev-storekeeper",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "dev-storekeeper",
+      "lastName": "Fictif",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${CHU_DEV_USER_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["storekeeper"],
+      "email": "dev-storekeeper@chu.invalid"
+    },
+    {
+      "username": "dev-hr",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "dev-hr",
+      "lastName": "Fictif",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${CHU_DEV_USER_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["hr"],
+      "email": "dev-hr@chu.invalid"
+    },
+    {
+      "username": "dev-hr2",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "dev-hr2",
+      "lastName": "Fictif",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${CHU_DEV_USER_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["hr"],
+      "email": "dev-hr2@chu.invalid"
+    }
+  ],
+  "scopeMappings": [
+    {
+      "client": "chu-web",
+      "roles": [
+        "reception",
+        "cashier",
+        "doctor",
+        "nurse",
+        "lab",
+        "biologist",
+        "imaging",
+        "pharmacy",
+        "direction",
+        "admin",
+        "storekeeper",
+        "hr"
+      ]
+    },
+    {
+      "client": "chu-dev-cli",
+      "roles": [
+        "reception",
+        "cashier",
+        "doctor",
+        "nurse",
+        "lab",
+        "biologist",
+        "imaging",
+        "pharmacy",
+        "direction",
+        "admin",
+        "storekeeper",
+        "hr"
+      ]
+    }
+  ],
+  "clientScopeMappings": {
+    "realm-management": [
+      {
+        "client": "chu-admin-api",
+        "roles": ["manage-users", "view-users", "query-users", "view-realm"]
+      }
+    ]
+  }
+}

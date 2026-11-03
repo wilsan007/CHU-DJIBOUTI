@@ -1,0 +1,18 @@
+groups:
+  - name: chu
+    rules:
+      - alert: ApiDown
+        expr: chu_api_up == 0 or up{job="api"} == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations: { summary: "Le noyau applicatif ne répond plus ou n'atteint plus sa base." }
+      - alert: EvenementAbandonne
+        expr: chu_events_dead > 0
+        labels: { severity: critical }
+        annotations:
+          { summary: "Un événement a été abandonné après trop d'essais : intervention nécessaire." }
+      - alert: RetardEvenements
+        expr: chu_events_backlog > 500
+        for: 5m
+        labels: { severity: warning }
+        annotations: { summary: "Les événements s'accumulent : un consommateur est bloqué." }

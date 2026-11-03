@@ -1,0 +1,7 @@
+{
+  "name": "@chu/repo-check",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Contrôle que le dépôt ne contient aucun secret ni fichier sensible (étape 3.5 du plan)"
+}

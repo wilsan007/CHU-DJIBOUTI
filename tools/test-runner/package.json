@@ -1,0 +1,7 @@
+{
+  "name": "@chu/test-runner",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Lance les tests ; démarre au besoin un PostgreSQL temporaire (étape 3.4 du plan)"
+}

@@ -1,0 +1,23 @@
+# Secrets : jamais dans le dépôt (plan, étape 3.5)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+secrets/
+# Sauvegardes et vidages de bases : contiennent des données de santé
+*.dump
+*.bak
+*.sql.gz
+infra/backup/data/
+# Données générées
+tools/seed/out/
+# Outillage
+node_modules/
+dist/
+coverage/
+.DS_Store
+*.log

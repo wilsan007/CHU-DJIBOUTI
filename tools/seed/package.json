@@ -1,0 +1,7 @@
+{
+  "name": "@chu/seed",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Générateur de données fictives (patients, rendez-vous, ordonnances, analyses) pour le développement et les tests"
+}

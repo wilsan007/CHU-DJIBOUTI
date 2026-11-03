@@ -1,0 +1,62 @@
+# Développement local. Les mots de passe viennent du fichier .env (jamais dans le dépôt) : voir .env.example.
+# Lancement : docker compose -f infra/compose/docker-compose.dev.yml --env-file .env up -d
+name: chu
+services:
+  postgres:
+    image: postgres:16.15
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?à renseigner dans .env}
+      LANG: en_US.utf8
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U postgres"], interval: 5s, retries: 12 }
+    networks: [interne]
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.1
+    command: start-dev --import-realm --http-relative-path=/ --proxy-headers=xforwarded
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:?}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?}
+      CHU_DEV_USER_PASSWORD: ${CHU_DEV_USER_PASSWORD:?mot de passe des comptes fictifs de développement}
+      CHU_ADMIN_CLIENT_SECRET: ${CHU_ADMIN_CLIENT_SECRET:?}
+    volumes: [../keycloak/realm-chu.json:/opt/keycloak/data/import/realm-chu.json:ro]
+    networks: [interne]
+
+  api:
+    build: { context: ../.., dockerfile: services/api/Dockerfile }
+    depends_on: { postgres: { condition: service_healthy } }
+    environment:
+      DATABASE_URL: postgres://chu_app:${CHU_APP_PASSWORD:?}@postgres:5432/chu
+      AUTH_ISSUER: ${AUTH_ISSUER:-http://localhost:8080/auth/realms/chu}
+      AUTH_AUDIENCE: chu-api
+      KEYCLOAK_ADMIN_URL: http://keycloak:8080
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${CHU_ADMIN_CLIENT_SECRET:?}
+      AUTH_JWKS_URL: http://keycloak:8080/realms/chu/protocol/openid-connect/certs
+    networks: [interne]
+
+  nginx:
+    image: nginx:1.30.6
+    depends_on: [api]
+    ports: ["127.0.0.1:8080:8080"]
+    volumes: [../nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro]
+    networks: [interne]
+
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    volumes:
+      [
+        ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro,
+        ../monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro,
+      ]
+    ports: ["127.0.0.1:9090:9090"]
+    networks: [interne]
+
+  grafana:
+    image: grafana/grafana:13.3.0
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?}
+    ports: ["127.0.0.1:3001:3000"]
+    networks: [interne]
+
+volumes: { pgdata: {} }
+networks: { interne: {} }
