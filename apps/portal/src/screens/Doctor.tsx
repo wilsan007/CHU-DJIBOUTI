@@ -3,6 +3,7 @@ import { api } from "../api.ts";
 import { label, t } from "../i18n.ts";
 import { ErrorBox, Notice } from "../ui.tsx";
 import { ConsultationPanel } from "./Consultation.tsx";
+import { openImage } from "./Imaging.tsx";
 
 interface Entry {
   id: string;
@@ -200,6 +201,7 @@ function PatientPanel({ entry, onSent }: { entry: Entry; onSent: (m: string) => 
         <ConsultationPanel patientId={entry.patientId} encounterId={entry.encounterId} />
       )}
       <Results patientId={entry.patientId} />
+      <ImagingReports patientId={entry.patientId} />
       <OrderForm entry={entry} onSent={onSent} />
     </div>
   );
@@ -377,6 +379,67 @@ function OrderForm({ entry, onSent }: { entry: Entry; onSent: (m: string) => voi
       >
         {t("doctor.send")}
       </button>
+    </div>
+  );
+}
+
+interface ImagingItem {
+  id: string;
+  number: string;
+  labelFr: string;
+  labelAr: string;
+  status: string;
+}
+interface ImagingDetail {
+  images: { id: string; filename: string }[];
+  reports: { version: number; findings: string; conclusion: string }[];
+}
+
+/** Comptes rendus d'imagerie signés : lecture seule pour le médecin. */
+function ImagingReports({ patientId }: { patientId: string }): ReactNode {
+  const [items, setItems] = useState<(ImagingItem & { detail: ImagingDetail })[]>([]);
+  useEffect(() => {
+    const load = async (): Promise<void> => {
+      try {
+        const list = (
+          await api<{ requests: ImagingItem[] }>(`/api/imaging/requests?patientId=${patientId}`)
+        ).requests.filter((r) => r.status === "reported");
+        setItems(
+          await Promise.all(
+            list.map(async (r) => ({
+              ...r,
+              detail: await api<ImagingDetail>(`/api/imaging/requests/${r.id}`),
+            })),
+          ),
+        );
+      } catch {
+        setItems([]);
+      }
+    };
+    void load();
+    const timer = setInterval(() => void load(), 10_000);
+    return () => clearInterval(timer);
+  }, [patientId]);
+  if (items.length === 0) return null;
+  return (
+    <div data-imaging-reports>
+      <h3>{t("doctor.imaging")}</h3>
+      <ul className="plain">
+        {items.map((r) => (
+          <li key={r.id} data-imaging-report={r.number}>
+            <strong>{label(r.labelFr, r.labelAr)}</strong> <span className="muted">{r.number}</span>
+            <p>{r.detail.reports[0]?.findings}</p>
+            <p>
+              {t("doctor.imaging.conclusion")} : <strong>{r.detail.reports[0]?.conclusion}</strong>
+            </p>
+            {r.detail.images.map((i) => (
+              <button key={i.id} onClick={() => void openImage(i.id)}>
+                {t("doctor.imaging.open", { name: i.filename })}
+              </button>
+            ))}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

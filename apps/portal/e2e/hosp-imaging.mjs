@@ -223,6 +223,19 @@ try {
   const full = (await api("dev-doctor", `/api/imaging/requests/${reqs[0].id}`, { expect: 200 }))
     .data;
   assert.equal(full.images.length, 1);
+  // Le médecin lit le compte rendu dans le dossier du patient (lecture seule).
+  await doc.click("nav[aria-label='principal'] button:has-text('Médecin')");
+  await doc.locator("button.row", { hasText: `Radio Essai${suffix}` }).click();
+  const rep = doc.locator("[data-imaging-report]");
+  await rep.waitFor({ timeout: 15000 });
+  assert.ok((await rep.textContent()).includes("Examen sans anomalie"));
+  const [popup] = await Promise.all([
+    doc.context().waitForEvent("page"),
+    rep.locator("button", { hasText: "Ouvrir l'image" }).click(),
+  ]);
+  await popup.waitForLoadState();
+  assert.ok(popup.url().startsWith("blob:"), "image ouverte depuis le compte rendu");
+  await shot(doc, "imaging-2-doctor");
   console.log("OK hospitalisation + imagerie");
 } finally {
   await browser.close();

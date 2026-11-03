@@ -452,5 +452,17 @@
   "role.storekeeper": "Magasinier",
   "role.hr": "Ressources humaines",
   "role.direction": "Direction",
-  "role.admin": "Administration"
+  "role.admin": "Administration",
+  "hosp.order.status.awaiting_payment": "à payer",
+  "hosp.order.status.released": "payée, libérée",
+  "hosp.order.status.completed": "exécutée",
+  "hosp.order.status.cancelled": "annulée",
+  "hosp.order.kind.initial": "forfait initial",
+  "hosp.order.kind.extra": "acte supplémentaire",
+  "hosp.invoice.status.pending": "à payer",
+  "hosp.invoice.status.paid": "payée",
+  "hosp.invoice.status.credited": "annulée par avoir",
+  "doctor.imaging": "Comptes rendus d'imagerie",
+  "doctor.imaging.open": "Ouvrir l'image {name}",
+  "doctor.imaging.conclusion": "Conclusion"
 }

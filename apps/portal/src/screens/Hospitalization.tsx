@@ -245,7 +245,8 @@ function StayPanel({
       <ul className="plain" data-orders>
         {d.orders.map((o) => (
           <li key={o.id} data-order-status={o.status}>
-            {o.number} · {o.kind} · <span className="badge">{o.status}</span>
+            {o.number} · {t(`hosp.order.kind.${o.kind}`)} ·{" "}
+            <span className="badge">{t(`hosp.order.status.${o.status}`)}</span>
           </li>
         ))}
       </ul>
@@ -387,7 +388,7 @@ function StayPanel({
               {t("hosp.invoice", {
                 number: d.finalInvoice.number,
                 due: d.finalInvoice.amountDue,
-                status: d.finalInvoice.status,
+                status: t(`hosp.invoice.status.${d.finalInvoice.status}`),
               })}
             </p>
           ) : (

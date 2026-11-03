@@ -247,12 +247,16 @@ label textarea {
 }
 .subtabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-block-end: 12px;
 }
 .table {
   width: 100%;
   border-collapse: collapse;
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
 }
 .table th,
 .table td {

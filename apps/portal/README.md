@@ -41,6 +41,8 @@ node apps/portal/e2e/consultation.mjs   # consultation, ordonnance avec alerte, 
 node apps/portal/e2e/stock.mjs          # stocks, recettes, consommation automatique, manque, matériel utilisé
 node apps/portal/e2e/staff.mjs          # personnel : fiche, licence, planning, congé, suspension
 node apps/portal/e2e/hosp-imaging.mjs   # hospitalisation (forfait, lit, soins, sortie) et imagerie (examen, image, compte rendu)
+apps/portal/e2e/run-all.sh                # tout rejouer d'un coup (lit les secrets de la pile de test)
+node apps/portal/e2e/responsive.mjs     # téléphone 360 px et tablette 768 px, français et arabe : aucun débordement
 node apps/portal/e2e/direction-admin.mjs # tableau de bord de direction et administration des comptes
 ```
 

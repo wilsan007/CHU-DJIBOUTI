@@ -41,8 +41,8 @@ export async function api(user, path, { method = "GET", body, csv, expect } = {}
   return { status: res.status, data };
 }
 
-export async function login(browser, user, lang = "fr") {
-  const context = await browser.newContext({ viewport: { width: 1200, height: 900 } });
+export async function login(browser, user, lang = "fr", viewport = { width: 1200, height: 900 }) {
+  const context = await browser.newContext({ viewport });
   await context.addInitScript((l) => {
     try {
       localStorage.setItem("lang", l);

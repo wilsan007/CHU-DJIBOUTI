@@ -452,5 +452,17 @@
   "role.storekeeper": "أمين مخزن",
   "role.hr": "الموارد البشرية",
   "role.direction": "الإدارة",
-  "role.admin": "الإدارة التقنية"
+  "role.admin": "الإدارة التقنية",
+  "hosp.order.status.awaiting_payment": "في انتظار الدفع",
+  "hosp.order.status.released": "مدفوع ومُحرَّر",
+  "hosp.order.status.completed": "منفَّذ",
+  "hosp.order.status.cancelled": "ملغى",
+  "hosp.order.kind.initial": "الحزمة الأولية",
+  "hosp.order.kind.extra": "إجراء إضافي",
+  "hosp.invoice.status.pending": "في انتظار الدفع",
+  "hosp.invoice.status.paid": "مدفوعة",
+  "hosp.invoice.status.credited": "ملغاة بإشعار دائن",
+  "doctor.imaging": "تقارير التصوير الطبي",
+  "doctor.imaging.open": "فتح الصورة {name}",
+  "doctor.imaging.conclusion": "الخلاصة"
 }
