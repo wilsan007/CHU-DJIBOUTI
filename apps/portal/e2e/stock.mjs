@@ -71,7 +71,18 @@ try {
       .selectOption({ index: 0 })
       .catch(() => null);
     const option = keeper.locator("select[aria-label='Lot'] option", { hasText: code });
-    await option.first().waitFor({ state: "attached" });
+    // Les lots se chargent à la sélection du dépôt : si l'option tarde, on recharge en reselectionnant le dépôt.
+    const found = await option
+      .first()
+      .waitFor({ state: "attached", timeout: 8000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!found) {
+      const from = keeper.locator("select[aria-label='Dépôt d\\'origine']");
+      await from.selectOption({ index: 1 });
+      await from.selectOption({ label: "Magasin central" });
+      await option.first().waitFor({ state: "attached" });
+    }
     await keeper
       .locator("select[aria-label='Lot']")
       .selectOption({ value: await option.first().getAttribute("value") });

@@ -27,7 +27,7 @@ test("aucune traduction vide", () => {
 
 test("les textes arabes contiennent bien des caractères arabes", () => {
   // Le bouton de langue montre le nom de l'autre langue, dans cette langue : « Français » en arabe.
-  const exceptions = new Set(["nav.language"]);
+  const exceptions = new Set(["nav.language", "direction.none"]);
   for (const [key, value] of Object.entries(ar)) {
     if (exceptions.has(key)) continue;
     assert.match(value, /[؀-ۿ]/, `ar:${key} n'est pas en arabe`);

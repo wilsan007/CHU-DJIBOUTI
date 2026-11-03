@@ -289,3 +289,29 @@ summary {
   cursor: pointer;
   color: var(--muted);
 }
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+  margin-block-end: 8px;
+}
+.tile {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  display: grid;
+  gap: 4px;
+}
+.tile.alert {
+  border-color: #c0392b;
+  border-width: 2px;
+}
+.tile-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+.tile-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}

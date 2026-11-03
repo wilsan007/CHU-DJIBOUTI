@@ -4,6 +4,10 @@ import { manager } from "./auth.ts";
 import { setLang, t, useLang } from "./i18n.ts";
 import { Cashier } from "./screens/Cashier.tsx";
 import { Doctor } from "./screens/Doctor.tsx";
+import { Admin } from "./screens/Admin.tsx";
+import { Direction } from "./screens/Direction.tsx";
+import { Hospitalization } from "./screens/Hospitalization.tsx";
+import { Imaging } from "./screens/Imaging.tsx";
 import { Lab } from "./screens/Lab.tsx";
 import { MySpace } from "./screens/MySpace.tsx";
 import { Staff } from "./screens/Staff.tsx";
@@ -58,6 +62,20 @@ const SCREENS: Screen[] = [
     render: (me) => <Staff me={me} />,
   },
   { id: "mySpace", label: "nav.mySpace", permission: "staff:directory", render: () => <MySpace /> },
+  {
+    id: "hosp",
+    label: "nav.hosp",
+    permission: "stay:read",
+    render: (me) => <Hospitalization me={me} />,
+  },
+  { id: "imaging", label: "nav.imaging", permission: "imaging:write", render: () => <Imaging /> },
+  {
+    id: "direction",
+    label: "nav.direction",
+    permission: "dashboard:read",
+    render: () => <Direction />,
+  },
+  { id: "admin", label: "nav.admin", permission: "admin:manage", render: () => <Admin /> },
 ];
 
 export function App(): ReactNode {
