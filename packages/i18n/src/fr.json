@@ -464,5 +464,10 @@
   "hosp.invoice.status.credited": "annulée par avoir",
   "doctor.imaging": "Comptes rendus d'imagerie",
   "doctor.imaging.open": "Ouvrir l'image {name}",
-  "doctor.imaging.conclusion": "Conclusion"
+  "doctor.imaging.conclusion": "Conclusion",
+  "imaging.dicom": "Images DICOM de l'appareil",
+  "imaging.dicom.count": "{n} image(s)",
+  "imaging.dicom.view": "Voir les images",
+  "imaging.dicom.image": "Image DICOM",
+  "imaging.dicom.mismatch": "Identifiant patient différent : non affiché, prévenir l'imagerie"
 }

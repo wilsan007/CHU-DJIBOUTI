@@ -23,9 +23,11 @@ export async function createRequestsFromTicket(tx: Tx, ctx: RequestContext, tick
   for (const item of c.items) {
     for (let i = 0; i < item.quantity; i += 1) {
       const number = await nextNumber(tx, "imaging", "request", "X");
+      // L'accession existe dès la création : c'est elle qui relie la liste de travail de l'appareil aux images.
+      const accession = await nextNumber(tx, "imaging", "accession", "ACC", 8);
       const res = await tx.query<{ id: string }>(
-        `insert into imaging.requests (number, ticket_id, ticket_code, order_id, patient_id, prescriber_id, prescriber_name, act_code, label_fr, label_ar)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id`,
+        `insert into imaging.requests (number, ticket_id, ticket_code, order_id, patient_id, prescriber_id, prescriber_name, act_code, label_fr, label_ar, accession)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning id`,
         [
           number,
           ticketId,
@@ -37,6 +39,7 @@ export async function createRequestsFromTicket(tx: Tx, ctx: RequestContext, tick
           item.actCode,
           item.labelFr,
           item.labelAr,
+          accession,
         ],
       );
       const id = (res.rows[0] as { id: string }).id;
@@ -148,7 +151,7 @@ export async function perform(db: Db, ctx: RequestContext, id: string) {
     if (ticket.rows[0]?.status === "sent") await startTicketIn(tx, ctx, r.ticket_id);
     else if (ticket.rows[0]?.status === "cancelled")
       throw new DomainError("ticket_cancelled", "Le ticket de cet examen est annulé.", 409);
-    const accession = await nextNumber(tx, "imaging", "accession", "ACC", 8);
+    const accession = r.accession ?? (await nextNumber(tx, "imaging", "accession", "ACC", 8));
     await tx.query(
       "update imaging.requests set status = 'in_progress', accession = $2, performed_by = $3, performed_at = now() where id = $1",
       [id, accession, ctx.user.id],
@@ -344,6 +347,22 @@ export async function getRequest(db: Db, ctx: RequestContext, id: string) {
           )
         ).rows
       : [];
+  const studies =
+    staff || reported
+      ? (
+          await db.query<{
+            id: string;
+            modality: string | null;
+            description: string | null;
+            series_count: number;
+            instance_count: number;
+            patient_match: boolean;
+          }>(
+            "select id, modality, description, series_count, instance_count, patient_match from imaging.studies where request_id = $1 order by first_seen_at",
+            [id],
+          )
+        ).rows
+      : [];
   const person = (await patientSummaries(db, [r.patient_id])).get(r.patient_id) ?? null;
   await writeAudit(db as unknown as Tx, ctx, {
     action: "imaging.read",
@@ -362,5 +381,48 @@ export async function getRequest(db: Db, ctx: RequestContext, id: string) {
       at: x.reported_at.toISOString(),
     })),
     images,
+    studies: studies.map((x) => ({
+      id: x.id,
+      modality: x.modality,
+      description: x.description,
+      seriesCount: x.series_count,
+      instanceCount: x.instance_count,
+      patientMatch: x.patient_match,
+    })),
   };
+}
+
+/**
+ * Droit de voir une étude DICOM : mêmes règles que les images téléversées (le prescripteur attend le compte rendu),
+ * et une étude dont le PatientID ne correspond pas au patient de l'examen n'est jamais montrée.
+ */
+export async function studyAccess(db: Db, ctx: RequestContext, studyId: string) {
+  const res = await db.query<{
+    orthanc_id: string;
+    patient_match: boolean;
+    request_id: string;
+    status: string;
+    patient_id: string;
+  }>(
+    `select s.orthanc_id, s.patient_match, r.id as request_id, r.status, r.patient_id
+       from imaging.studies s join imaging.requests r on r.id = s.request_id where s.id = $1`,
+    [studyId],
+  );
+  const s = res.rows[0];
+  if (!s) throw notFound("Étude");
+  if (!isImagingStaff(ctx) && s.status !== "reported") throw notFound("Étude");
+  if (!s.patient_match)
+    throw new DomainError(
+      "study_patient_mismatch",
+      "Cette étude porte un autre identifiant de patient : elle n'est pas affichée. Prévenir le service d'imagerie.",
+      409,
+    );
+  await writeAudit(db as unknown as Tx, ctx, {
+    action: "imaging.study.read",
+    entityType: "imaging_request",
+    entityId: s.request_id,
+    patientId: s.patient_id,
+    detail: { study: studyId },
+  });
+  return { orthancId: s.orthanc_id };
 }

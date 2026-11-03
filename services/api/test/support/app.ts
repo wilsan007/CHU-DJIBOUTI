@@ -6,6 +6,7 @@ import { Dispatcher } from "../../src/events/dispatcher.ts";
 import { createTokenVerifier } from "../../src/auth/jwt.ts";
 import type { Role } from "../../src/auth/permissions.ts";
 import type { Db } from "../../src/db.ts";
+import type { PacsConfig } from "../../src/modules/imaging/pacs.ts";
 import type { UserDirectory } from "../../src/modules/admin/directory.ts";
 
 export const ISSUER = "https://keycloak.test/realms/chu";
@@ -27,7 +28,7 @@ export interface TestApp {
 
 export async function createTestApp(
   db: Db,
-  options: { directory?: UserDirectory } = {},
+  options: { directory?: UserDirectory; pacs?: PacsConfig | null } = {},
 ): Promise<TestApp> {
   const { publicKey, privateKey } = await generateKeyPair("RS256");
   const jwk: JWK = { ...(await exportJWK(publicKey)), kid: "test-key", alg: "RS256", use: "sig" };
@@ -36,7 +37,12 @@ export async function createTestApp(
     audience: AUDIENCE,
     keys: createLocalJWKSet({ keys: [jwk] }),
   });
-  const app = await buildApp({ db, verifier, directory: options.directory ?? null });
+  const app = await buildApp({
+    db,
+    verifier,
+    directory: options.directory ?? null,
+    pacs: options.pacs ?? null,
+  });
   const dispatcher = new Dispatcher({ db, consumers: allConsumers(), baseDelayMs: 1 });
   await app.ready();
 

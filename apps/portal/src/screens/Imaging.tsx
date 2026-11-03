@@ -15,7 +15,16 @@ interface Request {
   accession: string | null;
   patient: { name: string; identifier: string } | null;
 }
+export interface Study {
+  id: string;
+  modality: string | null;
+  description: string | null;
+  seriesCount: number;
+  instanceCount: number;
+  patientMatch: boolean;
+}
 interface Detail {
+  studies: Study[];
   images: { id: string; filename: string; mime: string }[];
   reports: { version: number; findings: string; conclusion: string }[];
 }
@@ -27,6 +36,60 @@ const toBase64 = (buf: ArrayBuffer): string => {
     s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return btoa(s);
 };
+
+async function authedBlob(path: string): Promise<string> {
+  const res = await fetch(path, {
+    headers: { authorization: `Bearer ${(await accessToken()) ?? ""}` },
+  });
+  if (!res.ok) throw new Error(String(res.status));
+  return URL.createObjectURL(await res.blob());
+}
+
+/** Études DICOM rattachées à l'examen : aperçus chargés à la demande, jamais d'accès direct au serveur d'images. */
+export function DicomStudies({ studies }: { studies: Study[] }): ReactNode {
+  const [shown, setShown] = useState<Record<string, string[]>>({});
+  const [error, setError] = useState<unknown>(null);
+  if (studies.length === 0) return null;
+  const open = async (s: Study): Promise<void> => {
+    setError(null);
+    try {
+      const list = await api<{ instances: { id: string }[] }>(
+        `/api/imaging/studies/${s.id}/instances`,
+      );
+      const urls = await Promise.all(
+        list.instances
+          .slice(0, 12)
+          .map((i) => authedBlob(`/api/imaging/studies/${s.id}/instances/${i.id}/preview`)),
+      );
+      setShown((cur) => ({ ...cur, [s.id]: urls }));
+    } catch (e) {
+      setError(e);
+    }
+  };
+  return (
+    <div data-dicom>
+      <h4>{t("imaging.dicom")}</h4>
+      <ErrorBox error={error} />
+      <ul className="plain">
+        {studies.map((s) => (
+          <li key={s.id} data-study={s.id} data-match={s.patientMatch}>
+            {s.modality ?? "?"} · {t("imaging.dicom.count", { n: s.instanceCount })}{" "}
+            {s.patientMatch ? (
+              <button onClick={() => void open(s)}>{t("imaging.dicom.view")}</button>
+            ) : (
+              <span className="flag critical">{t("imaging.dicom.mismatch")}</span>
+            )}
+            <div className="thumbs">
+              {(shown[s.id] ?? []).map((u) => (
+                <img key={u} src={u} alt={t("imaging.dicom.image")} width={160} />
+              ))}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 export async function openImage(id: string): Promise<void> {
   const res = await fetch(`/api/imaging/images/${id}`, {
@@ -152,6 +215,7 @@ function RequestCard({
       )}
       {request.status === "in_progress" && (
         <div className="form">
+          <DicomStudies studies={detail?.studies ?? []} />
           <p className="muted" data-image-count>
             {t("imaging.images", { count: detail?.images.length ?? 0 })}
           </p>

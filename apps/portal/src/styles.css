@@ -319,3 +319,14 @@ summary {
   color: var(--muted);
   font-size: 0.85rem;
 }
+.thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block-start: 8px;
+}
+.thumbs img {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #000;
+}

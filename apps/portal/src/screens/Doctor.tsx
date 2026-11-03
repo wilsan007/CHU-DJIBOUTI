@@ -3,7 +3,7 @@ import { api } from "../api.ts";
 import { label, t } from "../i18n.ts";
 import { ErrorBox, Notice } from "../ui.tsx";
 import { ConsultationPanel } from "./Consultation.tsx";
-import { openImage } from "./Imaging.tsx";
+import { DicomStudies, openImage, type Study } from "./Imaging.tsx";
 
 interface Entry {
   id: string;
@@ -391,6 +391,7 @@ interface ImagingItem {
   status: string;
 }
 interface ImagingDetail {
+  studies: Study[];
   images: { id: string; filename: string }[];
   reports: { version: number; findings: string; conclusion: string }[];
 }
@@ -432,6 +433,7 @@ function ImagingReports({ patientId }: { patientId: string }): ReactNode {
             <p>
               {t("doctor.imaging.conclusion")} : <strong>{r.detail.reports[0]?.conclusion}</strong>
             </p>
+            <DicomStudies studies={r.detail.studies} />
             {r.detail.images.map((i) => (
               <button key={i.id} onClick={() => void openImage(i.id)}>
                 {t("doctor.imaging.open", { name: i.filename })}

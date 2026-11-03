@@ -464,5 +464,10 @@
   "hosp.invoice.status.credited": "ملغاة بإشعار دائن",
   "doctor.imaging": "تقارير التصوير الطبي",
   "doctor.imaging.open": "فتح الصورة {name}",
-  "doctor.imaging.conclusion": "الخلاصة"
+  "doctor.imaging.conclusion": "الخلاصة",
+  "imaging.dicom": "صور DICOM من الجهاز",
+  "imaging.dicom.count": "{n} صورة",
+  "imaging.dicom.view": "عرض الصور",
+  "imaging.dicom.image": "صورة DICOM",
+  "imaging.dicom.mismatch": "معرّف مريض مختلف: غير معروضة، أبلغ قسم التصوير"
 }

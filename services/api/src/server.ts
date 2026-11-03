@@ -6,13 +6,16 @@ import { createPool } from "./db.ts";
 import { Dispatcher } from "./events/dispatcher.ts";
 import { keycloakDirectory } from "./modules/admin/directory.ts";
 import { escalateOverdue } from "./modules/lab/service.ts";
+import { pacsConfigFromEnv, syncStudies, syncWorklists } from "./modules/imaging/pacs.ts";
 import { providerFromEnv } from "./common/sms.ts";
 import { sendDueReminders, type NotificationProvider } from "./modules/appointments/reminders.ts";
 
 const config = loadConfig();
 const db = createPool(config.DATABASE_URL);
+const pacs = pacsConfigFromEnv(process.env);
 const app = await buildApp({
   db,
+  pacs,
   verifier: createTokenVerifier({
     issuer: config.AUTH_ISSUER,
     audience: config.AUTH_AUDIENCE,
@@ -53,6 +56,18 @@ const reminderTimer = setInterval(
   Number(process.env.REMINDER_INTERVAL_MS ?? 60_000),
 );
 
+// Serveur d'images DICOM (Orthanc), s'il est configuré : listes de travail pour les appareils, études rattachées aux examens.
+const pacsTimer = pacs
+  ? setInterval(
+      () => {
+        syncWorklists(db, pacs)
+          .then(() => syncStudies(db, pacs))
+          .catch((error) => app.log.error({ err: error }, "synchronisation du serveur d'images"));
+      },
+      Number(process.env.PACS_SYNC_INTERVAL_MS ?? 15_000),
+    )
+  : undefined;
+
 // Valeurs critiques non acquittées : escalade vers le responsable désigné par le biologiste.
 const escalationTimer = setInterval(
   () => {
@@ -66,6 +81,7 @@ const escalationTimer = setInterval(
 const stop = async () => {
   clearInterval(reminderTimer);
   clearInterval(escalationTimer);
+  if (pacsTimer) clearInterval(pacsTimer);
   await dispatcher.stop();
   await app.close();
   await db.end();

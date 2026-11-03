@@ -11,6 +11,8 @@ export interface PatientSummary {
   identifier: string;
   kind: "regular" | "provisional";
   name: string;
+  givenName: string | null;
+  familyName: string | null;
   birthDate: string | null;
   sex: "female" | "male" | null;
 }
@@ -34,6 +36,8 @@ function summary(r: Row): PatientSummary {
     identifier: r.identifier,
     kind: r.kind,
     name,
+    givenName: r.given_name,
+    familyName: r.family_name,
     birthDate: r.birth_date,
     sex: r.sex,
   };

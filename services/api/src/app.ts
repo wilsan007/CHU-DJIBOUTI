@@ -13,6 +13,7 @@ import { registerAdminRoutes } from "./modules/admin/routes.ts";
 import { checkAccount } from "./modules/admin/service.ts";
 import { registerDashboardRoutes } from "./modules/dashboard/routes.ts";
 import { registerHospitalizationRoutes } from "./modules/hospitalization/routes.ts";
+import type { PacsConfig } from "./modules/imaging/pacs.ts";
 import { registerImagingRoutes } from "./modules/imaging/routes.ts";
 import { registerStaffRoutes } from "./modules/staff/routes.ts";
 import { registerStockRoutes } from "./modules/stock/routes.ts";
@@ -30,6 +31,8 @@ export interface AppDeps {
   /** Annuaire des comptes (Keycloak) ; absent : la création de comptes est refusée, la désactivation reste locale. */
   directory?: UserDirectory | null;
   logger?: boolean;
+  /** Serveur d'images DICOM (Orthanc) ; absent ou null : les routes d'images DICOM répondent « non configuré ». */
+  pacs?: PacsConfig | null;
 }
 
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
@@ -140,7 +143,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await registerPharmacyRoutes(app, deps.db);
   await registerStockRoutes(app, deps.db);
   await registerLabRoutes(app, deps.db);
-  await registerImagingRoutes(app, deps.db);
+  await registerImagingRoutes(app, deps.db, deps.pacs ?? null);
   await registerHospitalizationRoutes(app, deps.db);
   await registerAdminRoutes(app, deps.db, deps.directory ?? null);
   await registerStaffRoutes(app, deps.db, deps.directory ?? null);
