@@ -1,0 +1,18 @@
+{
+  "name": "CHU Djibouti : recette en ligne (données fictives)",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/java:1": { "version": "21", "installMaven": "false" }
+  },
+  "hostRequirements": { "cpus": 4, "memory": "8gb" },
+  "postCreateCommand": "corepack enable && pnpm install --frozen-lockfile",
+  "postStartCommand": "nohup bash tools/dev-stack/codespaces.sh > /tmp/chu-codespaces.log 2>&1 &",
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": { "label": "CHU de Djibouti (portail)", "onAutoForward": "openBrowser" }
+  },
+  "customizations": {
+    "vscode": { "settings": { "terminal.integrated.defaultProfile.linux": "bash" } }
+  }
+}

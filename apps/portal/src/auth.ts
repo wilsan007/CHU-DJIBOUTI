@@ -1,6 +1,11 @@
 import { UserManager, WebStorageStateStore, type User } from "oidc-client-ts";
 
-const authority = import.meta.env.VITE_OIDC_AUTHORITY ?? "http://localhost:8081/realms/chu";
+const configured =
+  (import.meta.env.VITE_OIDC_AUTHORITY as string | undefined) || "http://localhost:8081/realms/chu";
+/** Une adresse commençant par « / » est relative à l'origine du portail (Keycloak servi sous /auth du même nom). */
+const authority = configured.startsWith("/")
+  ? `${window.location.origin}${configured}`
+  : configured;
 const clientId = import.meta.env.VITE_OIDC_CLIENT_ID ?? "chu-web";
 
 /** Connexion unique par Keycloak (code d'autorisation avec PKCE). Le jeton reste en mémoire de la session du navigateur. */

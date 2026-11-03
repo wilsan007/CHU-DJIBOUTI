@@ -53,3 +53,7 @@ aucune fusion sans relecture et sans tests verts, aucun secret dans le dépôt (
 
 Les valeurs cliniques (doses, seuils, plages) sont des exemples tant qu'un référent médical ne les a pas validées
 (étiquette `A-VALIDER-MEDECIN`). Les questions ouvertes sont dans [`docs/questions.md`](docs/questions.md).
+
+## Tester en ligne
+
+[Ouvrir dans GitHub Codespaces](https://codespaces.new/wilsan007/CHU-DJIBOUTI) : toute l'application démarre avec des données fictives, voir [docs/runbooks/recette-en-ligne.md](docs/runbooks/recette-en-ligne.md).
