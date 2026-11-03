@@ -95,6 +95,7 @@ export function App(): ReactNode {
 
   return (
     <div className="shell" data-lang={lang}>
+      <EnvBanner />
       <header className="bar">
         <strong className="brand">{t("app.name")}</strong>
         <nav aria-label="principal">
@@ -124,4 +125,14 @@ export function App(): ReactNode {
       </main>
     </div>
   );
+}
+
+/** Bandeau d'environnement (ex. « FORMATION : données fictives ») : défini à la construction par VITE_ENV_BANNER ; absent en production. */
+export function EnvBanner(): ReactNode {
+  const text = import.meta.env.VITE_ENV_BANNER as string | undefined;
+  return text ? (
+    <div className="env-banner" role="note" data-env-banner>
+      {text}
+    </div>
+  ) : null;
 }

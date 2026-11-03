@@ -47,6 +47,7 @@ node apps/portal/e2e/pacs.mjs           # imagerie DICOM avec un vrai Orthanc (v
 node apps/portal/e2e/lab-bridge.mjs     # automates ASTM/HL7 simulés → pont → API
 node apps/portal/e2e/patient-portal.mjs   # espace patient /patient : code SMS, rendez-vous, résultats, factures (variables en tête du script)
 node apps/portal/e2e/caisse-qr.mjs        # carte et étiquette : QR photographié et décodé ; avoir et clôture de caisse
+node apps/portal/e2e/import-patients.mjs  # reprise de patients depuis le jeu fictif (essai, application, rejeu)
 node apps/portal/e2e/direction-admin.mjs # tableau de bord de direction et administration des comptes
 ```
 

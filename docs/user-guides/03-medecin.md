@@ -14,7 +14,7 @@
    **justification écrite** pour continuer. « Signer » : l'ordonnance reçoit un code QR pour la pharmacie.
 6. **Demander des prestations** (analyse, radio, acte) : cochez, **« Envoyer à la caisse »**. **Aucun service ne la reçoit avant
    le paiement du patient.**
-7. **Clôturer** la consultation. Une consultation clôturée ne se modifie plus (une correction crée une nouvelle version).
+7. **Clôturer** la consultation. Une consultation clôturée **ne se modifie plus**.
 
 **Urgence vitale** : cochez « Urgence vitale… » et écrivez la **justification** (obligatoire) : les services travaillent tout de
 suite, la caisse régularise ensuite. Tout est tracé à votre nom.
@@ -37,7 +37,7 @@ le délai fixé, le système prévient le responsable désigné.
 ٥. **الوصفة**: الدواء والجرعة والأيام. يفحص النظام **الحساسيات والتداخلات**؛ والتنبيه يتطلب **تبريرًا مكتوبًا** للمتابعة. «توقيع»:
 تحصل الوصفة على رمز QR للصيدلية.
 ٦. **طلب خدمات** (تحليل، أشعة، إجراء): حدّد ثم **«إرسال إلى الصندوق»**. **لا تصل أي مصلحة قبل دفع المريض.**
-٧. **أغلق** الاستشارة. الاستشارة المغلقة لا تُعدَّل (التصحيح ينشئ نسخة جديدة).
+٧. **أغلق** الاستشارة. الاستشارة المغلقة **لا تُعدَّل**.
 
 **الحالة الحرجة**: حدّد «حالة حرجة…» واكتب **التبرير** (إلزامي): تعمل المصالح فورًا والصندوق يسوّي لاحقًا. كل شيء مسجَّل باسمك.
 

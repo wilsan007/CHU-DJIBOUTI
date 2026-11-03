@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ApiError } from "../api.ts";
 import { label, setLang, t, useLang } from "../i18n.ts";
 import { ErrorBox, fdj, Notice } from "../ui.tsx";
+import { EnvBanner } from "../App.tsx";
 import { getToken, papi, setToken } from "./patientApi.ts";
 
 interface Appt {
@@ -42,6 +43,7 @@ export function PatientApp(): ReactNode {
   );
   return (
     <div className="shell patient">
+      <EnvBanner />
       <header className="bar">
         <strong className="brand">{t("patient.brand")}</strong>
         <span className="spacer" />

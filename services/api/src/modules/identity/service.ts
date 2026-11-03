@@ -55,6 +55,15 @@ export async function createPatient(
   ctx: RequestContext,
   input: CreatePatientInput,
 ): Promise<{ patient: Patient; created: boolean }> {
+  return withTransaction(db, (tx) => createPatientIn(tx, ctx, input));
+}
+
+/** Création dans la transaction `tx` (la reprise de patients crée tout un fichier dans une seule transaction). */
+export async function createPatientIn(
+  tx: Tx,
+  ctx: RequestContext,
+  input: CreatePatientInput,
+): Promise<{ patient: Patient; created: boolean }> {
   if (input.externalId && !can(ctx.user.roles, "patient:import")) {
     throw new DomainError(
       "forbidden",
@@ -70,7 +79,7 @@ export async function createPatient(
   }
   const nameNorm = normalizeName(input.givenName, input.familyName);
 
-  return withTransaction(db, async (tx) => {
+  {
     if (input.externalId) {
       const existing = await tx.query<PatientRow>(
         `select ${PATIENT_COLUMNS} from identity.patients where external_id = $1`,
@@ -130,7 +139,7 @@ export async function createPatient(
       },
     });
     return { patient, created: true };
-  });
+  }
 }
 
 export async function createProvisionalPatient(

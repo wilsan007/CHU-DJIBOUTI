@@ -10,7 +10,8 @@
    « C'est un autre patient, créer ».
 3. **Admettre** : choisissez le service, le payeur et l'acte (ex. consultation générale), puis « Admettre à la consultation ».
    L'écran donne le numéro de **facture** : le patient va la payer **à la caisse**. Sans paiement, pas de consultation.
-4. Donnez la **carte** du patient (code QR) : elle sert aussi au laboratoire pour éviter les erreurs de patient.
+4. **« Imprimer la carte du patient (QR) »** : la carte (format carte bancaire) porte un code QR qui ne contient que le numéro de
+   dossier ; le laboratoire la scanne pour éviter les erreurs de patient. Le nom imprimé aide à reconnaître la carte.
 
 **À retenir** : la règle de la maison est « on paie d'abord, le service travaille ensuite ». Vous ne pouvez rien « offrir » :
 une gratuité passe par un payeur (ex. Ministère) choisi à l'admission, ou par une remise accordée à la caisse.
@@ -27,7 +28,7 @@ indiquez une année estimée (le système met le 1er juillet).
 «يوجد مرضى متقاربون، هل هو نفسه؟» فافحص كل سطر: إن كان هو فافتح ملفه، وإلا فاختر «هذا مريض آخر، أنشئ».
 ٣. **أدخل المريض**: اختر القسم والجهة الدافعة والإجراء (مثل الاستشارة العامة) ثم «إدخال إلى الاستشارة». تظهر الشاشة رقم
 **الفاتورة** ليدفعها المريض **في الصندوق**. بلا دفع لا استشارة.
-٤. سلّم المريض **بطاقته** (رمز QR): يستعملها المختبر أيضًا لتفادي الخطأ في هوية المريض.
+٤. **«طباعة بطاقة المريض (QR)»**: للبطاقة حجم بطاقة بنكية وتحمل رمز QR لا يتضمن إلا رقم الملف؛ يمسحه المختبر لتفادي الخطأ في هوية المريض.
 
 **للتذكير**: قاعدة المستشفى «يُدفع أولًا ثم تعمل المصلحة». لا يمكنك منح خدمة مجانًا: المجانية تمرّ عبر جهة دافعة (مثل الوزارة)
 تُختار عند الإدخال، أو عبر تخفيض يمنحه الصندوق.

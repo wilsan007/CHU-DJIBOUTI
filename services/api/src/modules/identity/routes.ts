@@ -1,5 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { renderCardHtml } from "./card-print.ts";
+import { importPatients } from "./import.ts";
+import { DomainError } from "../../errors.ts";
 import { contextOf, parseWith, requirePermission } from "../../http.ts";
 import type { Db } from "../../db.ts";
 import {
@@ -78,6 +80,22 @@ export async function registerIdentityRoutes(app: FastifyInstance, db: Db): Prom
     async (request) => {
       const { ref } = request.params as { ref: string };
       return getCard(await getPatient(db, contextOf(request), ref));
+    },
+  );
+
+  // Reprise des patients de l'ancien registre : essai par défaut, `?apply=true` pour écrire. Administrateur seulement.
+  app.post(
+    "/api/patients/import",
+    { preHandler: requirePermission("patient:import"), bodyLimit: 8 * 1024 * 1024 },
+    async (request) => {
+      if (typeof request.body !== "string")
+        throw new DomainError(
+          "csv_required",
+          "Envoyez le fichier CSV avec l'en-tête Content-Type: text/csv.",
+          400,
+        );
+      const apply = (request.query as { apply?: string }).apply === "true";
+      return importPatients(db, contextOf(request), request.body, { apply });
     },
   );
 

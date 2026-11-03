@@ -27,6 +27,28 @@ mkdirSync(outDir, { recursive: true });
 const file = join(outDir, "dataset.json");
 writeFileSync(file, json, "utf8");
 
+// Fichier d'import prêt pour POST /api/patients/import (reprise de l'ancien registre) : sert à la formation et aux essais.
+const importHeader = "id_externe,prenom,nom,sexe,date_naissance,age_estime,telephone";
+const importRows = dataset.patients.map((p) =>
+  [
+    p.externalId,
+    p.givenName,
+    p.familyName,
+    p.sex === "female" ? "F" : "H",
+    p.birthDate,
+    "",
+    "",
+  ].join(","),
+);
+writeFileSync(
+  join(outDir, "patients-import.csv"),
+  `${[importHeader, ...importRows].join("\n")}\n`,
+  "utf8",
+);
+console.log(
+  `Fichier d'import des patients fictifs écrit dans ${join(outDir, "patients-import.csv")}`,
+);
+
 const sha = createHash("sha256").update(json).digest("hex");
 console.log(`Jeu de données fictif écrit dans ${file}`);
 console.log(

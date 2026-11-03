@@ -342,3 +342,10 @@ summary {
   max-width: 960px;
   margin-inline: auto;
 }
+.env-banner {
+  background: #b45309;
+  color: #fff;
+  text-align: center;
+  font-weight: 700;
+  padding: 6px 12px;
+}
