@@ -6,6 +6,7 @@ import { createPool } from "./db.ts";
 import { Dispatcher } from "./events/dispatcher.ts";
 import { keycloakDirectory } from "./modules/admin/directory.ts";
 import { escalateOverdue } from "./modules/lab/service.ts";
+import { providerFromEnv } from "./common/sms.ts";
 import { sendDueReminders, type NotificationProvider } from "./modules/appointments/reminders.ts";
 
 const config = loadConfig();
@@ -40,12 +41,9 @@ const dispatcher = new Dispatcher({
 });
 dispatcher.start(Number(process.env.DISPATCH_INTERVAL_MS ?? 500));
 
-// Rappels de rendez-vous. Fournisseur SMS/WhatsApp à choisir par ticket de décision : en attendant,
-// les messages sont seulement écrits dans le journal du service (aucun envoi réel).
-const provider: NotificationProvider = {
-  send: async (message) =>
-    void app.log.info({ to: "(numéro masqué)", text: message.text }, "rappel prêt à l'envoi"),
-};
+// Rappels de rendez-vous : passerelle SMS HTTP configurable (SMS_GATEWAY_URL…) ; sans configuration, les messages
+// sont seulement écrits dans le journal du service (aucun envoi réel). WhatsApp s'ajoutera comme second fournisseur.
+const provider: NotificationProvider = providerFromEnv(process.env, (m) => app.log.info(m));
 const reminderTimer = setInterval(
   () => {
     sendDueReminders(db, provider).catch((error) =>

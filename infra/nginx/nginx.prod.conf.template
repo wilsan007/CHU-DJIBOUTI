@@ -4,7 +4,14 @@
 server_tokens off;
 upstream api { server ${API_UPSTREAM}; }
 upstream idp { server ${IDP_UPSTREAM}; }
-limit_req_zone $binary_remote_addr zone=login:10m rate=20r/m;
+# Freinage des tentatives de connexion seulement (formulaire et échange de jeton) : une clé vide n'est pas limitée,
+# donc le chargement des feuilles de style et polices de la page de connexion n'est jamais compté.
+map $request_uri $login_key {
+  default "";
+  ~^/auth/realms/[^/]+/login-actions/authenticate $binary_remote_addr;
+  ~^/auth/realms/[^/]+/protocol/openid-connect/token $binary_remote_addr;
+}
+limit_req_zone $login_key zone=login:10m rate=30r/m;
 limit_req_zone $binary_remote_addr zone=general:10m rate=20r/s;
 
 server {
@@ -49,8 +56,14 @@ server {
   location = /health { proxy_pass http://api; }
 
   location /auth/ {
-    limit_req zone=login burst=10 nodelay;
-    proxy_pass http://idp/;
+    limit_req zone=login burst=15 nodelay;
+    # Keycloak envoie lui-même sa politique CSP et ses règles de cadre (ses pages ont des scripts en ligne) ; on ne
+    # répète donc ici que les en-têtes qui ne gênent pas. Un add_header dans un bloc location remplace ceux du serveur.
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer" always;
+    # Keycloak est lancé avec --http-relative-path=/auth : le préfixe est conservé.
+    proxy_pass http://idp;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-Proto https;
     proxy_set_header X-Forwarded-For $remote_addr;

@@ -47,4 +47,13 @@ cp "$file" "$W/b/copy.dump.age"; cp "$file.sha256" "$W/b/copy.dump.age.sha256"; 
 printf 'x' >> "$W/b/copy.dump.age"
 RESTORE_DB_URL="$ADMIN/chu_restore_test" tools/backup/restore.sh "$W/b/copy.dump.age" "$W/key.txt" >/dev/null 2>&1 \
   && fail "fichier altéré accepté" || ok "fichier altéré détecté avant restauration"
+# 5. Deuxième base (celle de Keycloak en production) : mêmes outils, fichiers séparés par nom, rotation indépendante.
+psql "$ADMIN/postgres" -qc "drop database if exists kc_standin" -c "create database kc_standin"
+psql "$ADMIN/kc_standin" -qc "create table user_entity (id int primary key, username text); insert into user_entity values (1,'dev-a'),(2,'dev-b')"
+kcfile="$(BACKUP_NAME=keycloak BACKUP_DB_URL="$ADMIN/kc_standin" BACKUP_DIR="$W/b" BACKUP_AGE_RECIPIENT="$REC" tools/backup/backup.sh)"
+[[ "$kcfile" == *"/keycloak-"* ]] && ls "$W"/b/chu-*.dump.age >/dev/null && ok "base des comptes sauvegardée à part (fichier $(basename "$kcfile"))"
+psql "$ADMIN/postgres" -qc "drop database if exists kc_restore" -c "create database kc_restore"
+RESTORE_DB_URL="$ADMIN/kc_restore" tools/backup/restore.sh "$kcfile" "$W/key.txt" >/dev/null
+[ "$(psql "$ADMIN/kc_restore" -Atc "select count(*) from user_entity")" = "2" ] && ok "base des comptes restaurée"
+psql "$ADMIN/postgres" -qc "drop database kc_standin" -c "drop database kc_restore"
 echo "Sauvegarde / restauration : tout est vérifié."

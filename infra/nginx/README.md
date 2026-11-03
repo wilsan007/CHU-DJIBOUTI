@@ -15,5 +15,13 @@
 sur les fichiers statiques), cache, TLS 1.1 refusé / 1.3 accepté, API atteinte à travers le proxy, `/metrics` caché,
 corps trop gros refusé.
 
-Non vérifié : Keycloak servi sous `/auth` derrière ce proxy (essayé seulement avec Keycloak sur son propre port, avec une
-CSP élargie à cette adresse) ; certificat réel ; réglage fin des limites de débit avec un vrai nombre d'utilisateurs.
+`auth-path-test.sh` (essai complet) : second Keycloak servi sous `/auth` (`--http-relative-path=/auth`,
+`--hostname=https://<nom>/auth`, `--proxy-headers=xforwarded`), seconde API, portail construit avec
+`VITE_OIDC_AUTHORITY=https://<nom>/auth/realms/chu`, nginx en HTTPS ; `apps/portal/e2e/https-auth.mjs` connecte le
+médecin, parcourt tous ses écrans et le déconnecte, sans aucune violation de la politique de sécurité. Il a fait
+trouver deux défauts, corrigés : la CSP stricte cassait les pages de Keycloak (qui envoie ses propres règles), et le
+freinage de connexion comptait aussi les polices et feuilles de style (il ne vise plus que le formulaire et l'échange
+de jeton : 60 tentatives rapprochées → 503, pages non freinées).
+
+Non vérifié : certificat réel (autorité interne ou Let's Encrypt) ; réglage fin des limites de débit avec le vrai nombre
+d'utilisateurs (derrière un même pare-feu, plusieurs agents partagent une adresse : à surveiller).

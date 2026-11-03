@@ -39,7 +39,39 @@ Le script refuse : un fichier altéré (somme SHA-256), une mauvaise clé, une b
 sauvegarde** : faire l'exercice réel (restauration sur une autre machine, avec la vraie clé) une fois par trimestre et noter
 la date et la durée dans le registre d'exploitation.
 
+## Archivage continu (PITR) : perte de données de quelques secondes
+
+Avec l'archivage des journaux (WAL), on peut revenir à **n'importe quel instant** (par exemple juste avant une
+suppression accidentelle) au lieu du dernier cliché nocturne. Réglages du serveur PostgreSQL :
+
+```
+wal_level = replica
+archive_mode = on
+archive_command = 'test ! -f /archive/%f && cp %p /archive/%f'   # /archive = disque ou partage SÉPARÉ du serveur
+archive_timeout = 60
+```
+
+Cliché de base hebdomadaire : `pg_basebackup -D <dossier> -Fp -X stream -c fast`. Restauration : ce cliché devient le
+répertoire de données, `recovery.signal` y est créé, et `restore_command = 'cp /archive/%f %p'`,
+`recovery_target_time = '<instant>'`, `recovery_target_action = 'promote'` sont ajoutés. `pitr-test.sh` le prouve sur un
+PostgreSQL jetable (200 lignes retrouvées après un `delete` accidentel). Les journaux archivés contiennent des données de
+patients : ils sont à protéger et à chiffrer comme les sauvegardes (non fait par le script de test).
+
+## Base des comptes (Keycloak)
+
+En production Keycloak utilise PostgreSQL (`KC_DB=postgres`) : `BACKUP_NAME=keycloak BACKUP_DB_URL=… backup.sh` produit
+`keycloak-….dump.age`, rotation séparée. Vérifié avec un vrai Keycloak 26.8.1 sur PostgreSQL : un utilisateur créé avant la
+sauvegarde existe après restauration dans une autre base, et `dev-doctor` obtient un jeton sur le Keycloak démarré sur la
+base restaurée.
+
+## Exercice sur un serveur neuf
+
+`drill.sh <sauvegarde> <clé>` repart d'un PostgreSQL vierge (conteneur), recrée les rôles, restaure, compare le contenu
+à la sauvegarde, vérifie qu'aucune migration n'est en attente et démarre l'API sur la base restaurée. Mesuré : 6 secondes
+pour la base de test (quelques milliers de lignes) ; **le temps réel dépendra du volume du CHU**, à mesurer lors du premier
+exercice sur la vraie machine.
+
 ## Limites connues
 
-- Les images d'imagerie sont dans PostgreSQL (donc sauvegardées) ; si elles passent un jour sur un stockage séparé (Orthanc), il faudra le sauvegarder aussi.
-- Les comptes de connexion vivent dans Keycloak : sauvegarder sa base séparément (non couvert ici).
+- Les images d'imagerie sont dans PostgreSQL (donc sauvegardées) ; si elles passent sur Orthanc, le stockage d'Orthanc doit être sauvegardé aussi.
+- Le chiffrement des journaux WAL archivés et la copie hors site automatique restent à mettre en place sur le matériel du CHU.
