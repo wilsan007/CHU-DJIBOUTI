@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api } from "../api.ts";
 import { t } from "../i18n.ts";
-import { ErrorBox, Notice, confirmAction } from "../ui.tsx";
+import { ErrorBox, Notice, confirmAction, Btn } from "../ui.tsx";
 
 const ROLES = [
   "reception",
@@ -90,8 +90,10 @@ export function Admin(): ReactNode {
                         value={reasons[u.id] ?? ""}
                         onChange={(e) => setReasons({ ...reasons, [u.id]: e.target.value })}
                       />
-                      <button
-                        disabled={(reasons[u.id] ?? "").trim().length < 3}
+                      <Btn
+                        why={
+                          (reasons[u.id] ?? "").trim().length < 3 ? t("why.reason", { n: 3 }) : null
+                        }
                         onClick={() =>
                           void run(async () => {
                             if (!confirmAction(t("confirm.disableAccount"))) return undefined;
@@ -104,7 +106,7 @@ export function Admin(): ReactNode {
                         }
                       >
                         {t("admin.disable")}
-                      </button>
+                      </Btn>
                     </>
                   ) : (
                     <button
@@ -187,12 +189,14 @@ export function Admin(): ReactNode {
               onChange={(e) => setForm({ ...form, password: e.target.value })}
             />
           </label>
-          <button
+          <Btn
             className="primary"
-            disabled={
+            why={
               form.username.trim().length < 3 ||
               !form.email.includes("@") ||
               form.password.length < 12
+                ? t("why.fields")
+                : null
             }
             onClick={() =>
               void run(async () => {
@@ -211,7 +215,7 @@ export function Admin(): ReactNode {
             }
           >
             {t("admin.new.create")}
-          </button>
+          </Btn>
         </div>
       </div>
     </section>

@@ -105,7 +105,16 @@ export async function registerStaffRoutes(
   };
 
   // Self-service : chaque agent consulte sa fiche, ses gardes et gère ses demandes de congé.
-  app.get("/api/staff/me", async (request) => myRecord(db, contextOf(request)));
+  app.get("/api/staff/me", async (request, reply) => {
+    try {
+      return await myRecord(db, contextOf(request));
+    } catch (error) {
+      // Compte sans fiche du personnel (administrateur, compte technique…) : état normal, réponse vide (204), pas une erreur.
+      if (error instanceof DomainError && error.code === "no_staff_record")
+        return reply.status(204).send();
+      throw error;
+    }
+  });
   app.post("/api/staff/me/leaves", async (request, reply) =>
     reply
       .status(201)

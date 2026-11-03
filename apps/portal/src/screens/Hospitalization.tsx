@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, type Me } from "../api.ts";
 import { label, t } from "../i18n.ts";
-import { ErrorBox, fdj, Notice, confirmAction } from "../ui.tsx";
+import { ErrorBox, fdj, Notice, confirmAction, Btn } from "../ui.tsx";
 
 const NIGHT_ACT = "HOSP-1J";
 
@@ -263,9 +263,9 @@ function StayPanel({
                 </option>
               ))}
             </select>
-            <button
+            <Btn
               className="primary"
-              disabled={!bed}
+              why={!bed ? t("why.bed") : null}
               onClick={() =>
                 void run(async () => {
                   await api(`/api/stays/${id}/admit`, { method: "POST", body: { bedCode: bed } });
@@ -273,7 +273,7 @@ function StayPanel({
               }
             >
               {t("hosp.admit")}
-            </button>
+            </Btn>
           </div>
         </div>
       )}
@@ -318,8 +318,8 @@ function StayPanel({
                   value={charge.qty}
                   onChange={(e) => setCharge({ ...charge, qty: e.target.value })}
                 />
-                <button
-                  disabled={!charge.act}
+                <Btn
+                  why={!charge.act ? t("why.careAct") : null}
                   onClick={() =>
                     void run(async () => {
                       await api(`/api/stays/${id}/charges`, {
@@ -330,7 +330,7 @@ function StayPanel({
                   }
                 >
                   {t("hosp.charge.add")}
-                </button>
+                </Btn>
               </div>
               <div className="inline">
                 <select
@@ -345,8 +345,8 @@ function StayPanel({
                     </option>
                   ))}
                 </select>
-                <button
-                  disabled={!orderAct}
+                <Btn
+                  why={!orderAct ? t("why.heavyAct") : null}
                   onClick={() =>
                     void run(async () => {
                       const o = await api<{ number: string }>(`/api/stays/${id}/orders`, {
@@ -358,7 +358,7 @@ function StayPanel({
                   }
                 >
                   {t("hosp.order.add")}
-                </button>
+                </Btn>
               </div>
             </>
           )}
@@ -516,9 +516,13 @@ function NewStay({ onCreated }: { onCreated: (id: string) => void }): ReactNode 
           ))}
       </ul>
       <ErrorBox error={error} />
-      <button className="primary" disabled={!entry} onClick={() => void create()}>
+      <Btn
+        className="primary"
+        why={!entry ? t("why.stayPatient") : null}
+        onClick={() => void create()}
+      >
         {t("hosp.new.send")}
-      </button>
+      </Btn>
     </div>
   );
 }

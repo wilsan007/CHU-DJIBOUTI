@@ -551,3 +551,11 @@ details.discount {
     padding: 12px;
   }
 }
+
+.why {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-block: 2px 8px;
+  flex-basis: 100%;
+}

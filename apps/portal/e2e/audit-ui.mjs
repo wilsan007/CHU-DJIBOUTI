@@ -34,8 +34,8 @@ const MODES = [
   { name: "mobile-fr", lang: "fr", viewport: { width: 360, height: 740 } },
   { name: "sombre-fr", lang: "fr", viewport: { width: 1280, height: 900 }, colorScheme: "dark" },
 ];
-// Réponses 404 normales : compte sans fiche du personnel ; encadrement sans consultation commencée (le panneau le gère).
-const ALLOWED_HTTP = [/\/api\/staff\/me$/, /\/api\/encounters\/[^/]+\/consultation$/];
+// Aucune réponse 4xx/5xx n'est tolérée : les états normaux (sans fiche, sans consultation) répondent 204.
+const ALLOWED_HTTP = [];
 
 const findings = [];
 const buttonsSeen = {};
@@ -65,6 +65,7 @@ async function auditPage(page, ctx, collected) {
 
   const dom = await page.evaluate(() => {
     const out = {
+      mute: [],
       badText: [],
       small: [],
       noName: [],
@@ -99,11 +100,17 @@ async function auditPage(page, ctx, collected) {
           w: Math.round(r.width),
           h: Math.round(r.height),
         });
-      if (el.tagName === "BUTTON")
+      if (el.tagName === "BUTTON") {
+        // Un bouton inactif doit dire pourquoi : raison reliée (aria-describedby) ou info-bulle.
+        if (el.disabled && el.closest("main") && !el.getAttribute("aria-describedby") && !el.title)
+          out.mute.push(name.slice(0, 50));
         out.buttons.push({ name: name.slice(0, 60), disabled: el.disabled });
+      }
     }
     return out;
   });
+  for (const m of dom.mute)
+    add({ ...ctx, kind: "texte-brut", text: `bouton inactif sans explication : ${m}` });
   for (const t of dom.badText) add({ ...ctx, kind: "texte-brut", text: t });
   for (const n of dom.noName) add({ ...ctx, kind: "sans-nom", html: n });
   if (ctx.mode.startsWith("mobile"))

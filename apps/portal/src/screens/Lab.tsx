@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, type Me } from "../api.ts";
 import { label, t } from "../i18n.ts";
-import { ErrorBox, Notice } from "../ui.tsx";
+import { ErrorBox, Notice, Btn } from "../ui.tsx";
 
 interface Patient {
   name: string;
@@ -203,13 +203,13 @@ function CollectCard({
           </label>
           <p className="muted">{t("lab.scanPatient.hint")}</p>
           <ErrorBox error={error} />
-          <button
+          <Btn
             className="primary"
-            disabled={!scan.trim() || !type}
+            why={!scan.trim() || !type ? t("why.collect") : null}
             onClick={() => void collect()}
           >
             {t("lab.collect")}
-          </button>
+          </Btn>
         </>
       )}
     </article>
@@ -271,9 +271,9 @@ function SpecimenCard({
               autoComplete="off"
             />
           </label>
-          <button
+          <Btn
             className="primary"
-            disabled={!scan.trim()}
+            why={!scan.trim() ? t("why.scanSpecimen") : null}
             onClick={() =>
               void run(() =>
                 api("/api/lab/specimens/receive", { method: "POST", body: { scan: scan.trim() } }),
@@ -281,13 +281,13 @@ function SpecimenCard({
             }
           >
             {t("lab.receive")}
-          </button>
+          </Btn>
           <label>
             {t("lab.rejectReason")}
             <input value={reason} onChange={(e) => setReason(e.target.value)} />
           </label>
-          <button
-            disabled={reason.trim().length < 5}
+          <Btn
+            why={reason.trim().length < 5 ? t("why.reason", { n: 5 }) : null}
             onClick={() =>
               void run(
                 () =>
@@ -300,7 +300,7 @@ function SpecimenCard({
             }
           >
             {t("lab.reject")}
-          </button>
+          </Btn>
         </div>
       )}
 
@@ -331,10 +331,12 @@ function SpecimenCard({
                       value={values[x.testCode] ?? ""}
                       onChange={(e) => setValues({ ...values, [x.testCode]: e.target.value })}
                     />
-                    <button
-                      disabled={
+                    <Btn
+                      why={
                         !(values[x.testCode] ?? "").trim() ||
                         Number.isNaN(Number(values[x.testCode]))
+                          ? t("why.fields")
+                          : null
                       }
                       onClick={() =>
                         void run(async () => {
@@ -351,7 +353,7 @@ function SpecimenCard({
                       }
                     >
                       {t("lab.saveResult")}
-                    </button>
+                    </Btn>
                   </div>
                 )}
               </div>

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, type Me } from "../api.ts";
 import { label, t } from "../i18n.ts";
-import { ErrorBox, Notice, ScrollTable } from "../ui.tsx";
+import { ErrorBox, Notice, ScrollTable, Btn } from "../ui.tsx";
 
 export interface Item {
   code: string;
@@ -249,12 +249,12 @@ function Levels(): ReactNode {
             value={threshold.minimum}
             onChange={(e) => setThreshold({ ...threshold, minimum: e.target.value })}
           />
-          <button
-            disabled={!threshold.item || !threshold.minimum.trim()}
+          <Btn
+            why={!threshold.item || !threshold.minimum.trim() ? t("why.fields") : null}
             onClick={() => void setMin()}
           >
             {t("stock.threshold.set")}
-          </button>
+          </Btn>
         </div>
       </div>
       <div className="card">
@@ -401,13 +401,13 @@ function Receive(): ReactNode {
         <input inputMode="numeric" value={qty} onChange={(e) => setQty(e.target.value)} />
       </label>
       <ErrorBox error={error} />
-      <button
+      <Btn
         className="primary"
-        disabled={!item || !lot.trim() || !expires || !qty.trim()}
+        why={!item || !lot.trim() || !expires || !qty.trim() ? t("why.fields") : null}
         onClick={() => void submit()}
       >
         {t("stock.receive")}
-      </button>
+      </Btn>
     </div>
   );
 }
@@ -505,13 +505,13 @@ function Transfer(): ReactNode {
         <input inputMode="numeric" value={qty} onChange={(e) => setQty(e.target.value)} />
       </label>
       <ErrorBox error={error} />
-      <button
+      <Btn
         className="primary"
-        disabled={!lotId || !qty.trim() || !from || !to}
+        why={!lotId || !qty.trim() || !from || !to ? t("why.fields") : null}
         onClick={() => void go()}
       >
         {t("stock.transfer.go")}
-      </button>
+      </Btn>
     </div>
   );
 }
@@ -627,13 +627,15 @@ function Recipes(): ReactNode {
         <input value={responsible} onChange={(e) => setResponsible(e.target.value)} />
       </label>
       <ErrorBox error={error} />
-      <button
+      <Btn
         className="primary"
-        disabled={!act || !responsible.trim() || lines.some((l) => l.quantity < 1)}
+        why={
+          !act || !responsible.trim() || lines.some((l) => l.quantity < 1) ? t("why.fields") : null
+        }
         onClick={() => void save()}
       >
         {t("stock.recipes.save")}
-      </button>
+      </Btn>
     </div>
   );
 }
@@ -681,12 +683,12 @@ function Shortfalls(): ReactNode {
               value={reasons[s.id] ?? ""}
               onChange={(e) => setReasons({ ...reasons, [s.id]: e.target.value })}
             />
-            <button
-              disabled={(reasons[s.id] ?? "").trim().length < 5}
+            <Btn
+              why={(reasons[s.id] ?? "").trim().length < 5 ? t("why.reason", { n: 5 }) : null}
               onClick={() => void resolve(s.id)}
             >
               {t("stock.shortfalls.resolve")}
-            </button>
+            </Btn>
           </div>
         </div>
       ))}
@@ -738,9 +740,9 @@ function Items(): ReactNode {
         </label>
         <ErrorBox error={error} />
         <Notice>{notice}</Notice>
-        <button className="primary" disabled={!csv.trim()} onClick={() => void run()}>
+        <Btn className="primary" why={!csv.trim() ? t("why.csv") : null} onClick={() => void run()}>
           {t("stock.items.import.go")}
-        </button>
+        </Btn>
       </div>
       <div className="card">
         <ScrollTable>

@@ -359,8 +359,22 @@ test("planning : chevauchement et repos de 24 h après une garde refusés, qui e
 test("congés : demande par l'agent, décision par un autre, gardes sur la période à retirer d'abord", async () => {
   const doc = await create({ givenName: "Idriss", familyName: "Conge" });
   assert.equal(
-    (await call("doctor", "GET", "/api/staff/me", undefined, "dr-conge")).body.error.code,
+    (await call("doctor", "GET", "/api/staff/me", undefined, "dr-conge")).status,
+    204,
+    "compte sans fiche : réponse vide, pas une erreur",
+  );
+  assert.equal(
+    (
+      await call(
+        "doctor",
+        "POST",
+        "/api/staff/me/leaves",
+        { kind: "annual", startsOn: "2030-01-01", endsOn: "2030-01-02" },
+        "dr-conge",
+      )
+    ).body.error.code,
     "no_staff_record",
+    "mais demander un congé sans fiche reste refusé",
   );
   assert.equal(
     (await call("hr", "POST", `/api/staff/${doc.id}/link`, { userId: "dr-conge" }, HR)).status,

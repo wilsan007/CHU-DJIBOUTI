@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ApiError } from "../api.ts";
 import { label, setLang, t, useLang } from "../i18n.ts";
-import { confirmAction, ErrorBox, fdj, Notice, ProgressBar } from "../ui.tsx";
+import { confirmAction, ErrorBox, fdj, Notice, ProgressBar, Btn } from "../ui.tsx";
 import { EnvBanner } from "../App.tsx";
 import { getToken, papi, setToken } from "./patientApi.ts";
 
@@ -108,9 +108,9 @@ function Login({ onDone }: { onDone: () => void }): ReactNode {
             />
           </label>
           <p className="muted">{t("patient.login.hint")}</p>
-          <button
+          <Btn
             className="primary"
-            disabled={busy || identifier.trim().length < 3}
+            why={busy ? null : identifier.trim().length < 3 ? t("why.id") : null}
             onClick={() =>
               void run(async () => {
                 await papi("/api/portal/otp/request", {
@@ -122,7 +122,7 @@ function Login({ onDone }: { onDone: () => void }): ReactNode {
             }
           >
             {t("patient.login.send")}
-          </button>
+          </Btn>
         </>
       ) : (
         <>
@@ -138,9 +138,9 @@ function Login({ onDone }: { onDone: () => void }): ReactNode {
             />
           </label>
           <div className="actions">
-            <button
+            <Btn
               className="primary"
-              disabled={busy || code.length !== 6}
+              why={busy ? null : code.length !== 6 ? t("why.code6") : null}
               onClick={() =>
                 void run(async () => {
                   const r = await papi<{ token: string }>("/api/portal/otp/verify", {
@@ -153,7 +153,7 @@ function Login({ onDone }: { onDone: () => void }): ReactNode {
               }
             >
               {t("patient.login.verify")}
-            </button>
+            </Btn>
             <button onClick={() => (setStep("id"), setCode(""), setError(null))}>
               {t("patient.login.back")}
             </button>

@@ -641,4 +641,15 @@ test("la consultation d'une admission se retrouve à partir de l'admission (file
     (await call("cashier", "GET", `/api/encounters/${c.encounterId}/consultation`)).status,
     403,
   );
+  // Admission sans consultation commencée : 204 (état normal), pas d'erreur.
+  const p = await newPatient(call, "SansConsultation");
+  const adm = await admitPatient(call, p.id);
+  const none = await call(
+    "doctor",
+    "GET",
+    `/api/encounters/${adm.encounter.id}/consultation`,
+    undefined,
+    DR1,
+  );
+  assert.equal(none.status, 204, none.raw);
 });

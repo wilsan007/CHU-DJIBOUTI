@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { accessToken } from "../auth.ts";
 import { api } from "../api.ts";
 import { label, t } from "../i18n.ts";
-import { ErrorBox, Notice } from "../ui.tsx";
+import { ErrorBox, Notice, Btn } from "../ui.tsx";
 
 interface Request {
   id: string;
@@ -187,8 +187,8 @@ function RequestCard({
             <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
           </label>
           <div className="actions">
-            <button
-              disabled={!when}
+            <Btn
+              why={!when ? t("why.when") : null}
               onClick={() =>
                 void run(async () => {
                   await api(`/api/imaging/requests/${request.id}/schedule`, {
@@ -199,7 +199,7 @@ function RequestCard({
               }
             >
               {t("imaging.schedule")}
-            </button>
+            </Btn>
             <button
               className="primary"
               onClick={() =>
@@ -248,9 +248,11 @@ function RequestCard({
             {t("imaging.conclusion")}
             <textarea rows={2} value={conclusion} onChange={(e) => setConclusion(e.target.value)} />
           </label>
-          <button
+          <Btn
             className="primary"
-            disabled={findings.trim().length < 3 || conclusion.trim().length < 3}
+            why={
+              findings.trim().length < 3 || conclusion.trim().length < 3 ? t("why.fields") : null
+            }
             onClick={() =>
               void run(async () => {
                 const r = await api<{ version: number }>(
@@ -265,7 +267,7 @@ function RequestCard({
             }
           >
             {t("imaging.report")}
-          </button>
+          </Btn>
         </div>
       )}
     </article>

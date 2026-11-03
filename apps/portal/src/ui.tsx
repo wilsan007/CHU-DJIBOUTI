@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { ApiError, getPending, subscribePending } from "./api.ts";
 import { t } from "./i18n.ts";
 
@@ -67,5 +67,37 @@ export function ScrollTable({ children }: { children: ReactNode }): ReactNode {
     <div className="scroll" tabIndex={0} role="region" aria-label={t("common.table")}>
       {children}
     </div>
+  );
+}
+
+/**
+ * Bouton qui dit POURQUOI il est inactif : tant que `why` est renseigné, le bouton est désactivé et la raison s'affiche juste
+ * dessous (et dans l'info-bulle), reliée au bouton pour les lecteurs d'écran. Plus de bouton grisé et muet.
+ */
+export function Btn({
+  why,
+  children,
+  ...rest
+}: { why?: string | null } & Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  "disabled"
+>): ReactNode {
+  const id = useId();
+  return (
+    <>
+      <button
+        {...rest}
+        disabled={Boolean(why)}
+        title={why ?? rest.title}
+        aria-describedby={why ? id : undefined}
+      >
+        {children}
+      </button>
+      {why ? (
+        <small id={id} className="why">
+          {why}
+        </small>
+      ) : null}
+    </>
   );
 }

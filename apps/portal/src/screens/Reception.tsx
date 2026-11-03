@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { api, ApiError } from "../api.ts";
 import { label, t } from "../i18n.ts";
-import { ErrorBox, Notice } from "../ui.tsx";
+import { ErrorBox, Notice, Btn } from "../ui.tsx";
 
 interface Patient {
   id: string;
@@ -311,9 +311,13 @@ function Admission({
         </select>
       </label>
       <ErrorBox error={error} />
-      <button className="primary" disabled={!act || !payer} onClick={() => void admit()}>
+      <Btn
+        className="primary"
+        why={!act || !payer ? t("why.fields") : null}
+        onClick={() => void admit()}
+      >
         {t("reception.admit")}
-      </button>
+      </Btn>
     </div>
   );
 }

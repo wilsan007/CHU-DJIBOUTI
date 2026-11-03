@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, ApiError, type Me } from "../api.ts";
 import { label, t } from "../i18n.ts";
-import { ErrorBox, Notice, confirmAction, ScrollTable } from "../ui.tsx";
+import { ErrorBox, Notice, confirmAction, ScrollTable, Btn } from "../ui.tsx";
 
 const CATEGORIES = [
   "physician",
@@ -323,9 +323,9 @@ function NewMember({ onCreated }: { onCreated: (m: Member) => void }): ReactNode
       )}
       <ErrorBox error={error} />
       <div className="actions">
-        <button
+        <Btn
           className="primary"
-          disabled={
+          why={
             !f.givenName ||
             !f.familyName ||
             !f.jobTitle ||
@@ -334,11 +334,13 @@ function NewMember({ onCreated }: { onCreated: (m: Member) => void }): ReactNode
               (account.username.trim().length < 3 ||
                 !account.email.includes("@") ||
                 account.password.length < 12))
+              ? t("why.fields")
+              : null
           }
           onClick={() => void submit()}
         >
           {t("staff.create")}
-        </button>
+        </Btn>
         <button onClick={() => setOpen(false)}>{t("common.cancel")}</button>
       </div>
     </div>
@@ -452,8 +454,8 @@ function MemberPanel({
               value={q.expiresOn}
               onChange={(e) => setQ({ ...q, expiresOn: e.target.value })}
             />
-            <button
-              disabled={q.title.trim().length < 2}
+            <Btn
+              why={q.title.trim().length < 2 ? t("why.text", { n: 2 }) : null}
               onClick={() =>
                 void run(async () => {
                   await api(`/api/staff/${id}/qualifications`, {
@@ -469,7 +471,7 @@ function MemberPanel({
               }
             >
               {t("staff.qualification.add")}
-            </button>
+            </Btn>
           </div>
 
           <h3>{t("staff.status")}</h3>
@@ -491,8 +493,8 @@ function MemberPanel({
               value={status.reason}
               onChange={(e) => setStatus({ ...status, reason: e.target.value })}
             />
-            <button
-              disabled={status.reason.trim().length < 3}
+            <Btn
+              why={status.reason.trim().length < 3 ? t("why.reason", { n: 3 }) : null}
               onClick={() =>
                 void run(async () => {
                   if (status.status !== "active" && !confirmAction(t("confirm.staffStatus")))
@@ -519,7 +521,7 @@ function MemberPanel({
               }
             >
               {t("staff.status.change")}
-            </button>
+            </Btn>
           </div>
 
           <div className="inline">
@@ -529,8 +531,8 @@ function MemberPanel({
               value={account}
               onChange={(e) => setAccount(e.target.value)}
             />
-            <button
-              disabled={!account.trim()}
+            <Btn
+              why={!account.trim() ? t("why.account") : null}
               onClick={() =>
                 void run(async () => {
                   await api(`/api/staff/${id}/link`, {
@@ -542,7 +544,7 @@ function MemberPanel({
               }
             >
               {t("staff.link.go")}
-            </button>
+            </Btn>
           </div>
         </>
       )}
@@ -729,9 +731,13 @@ function Roster(): ReactNode {
           />
         </label>
         <ErrorBox error={error} />
-        <button className="primary" disabled={!f.memberId} onClick={() => void add()}>
+        <Btn
+          className="primary"
+          why={!f.memberId ? t("why.member") : null}
+          onClick={() => void add()}
+        >
           {t("staff.roster.add")}
-        </button>
+        </Btn>
       </div>
     </div>
   );
@@ -778,19 +784,19 @@ function Leaves(): ReactNode {
               value={notes[l.id] ?? ""}
               onChange={(e) => setNotes({ ...notes, [l.id]: e.target.value })}
             />
-            <button
+            <Btn
               className="primary"
-              disabled={(notes[l.id] ?? "").trim().length < 3}
+              why={(notes[l.id] ?? "").trim().length < 3 ? t("why.reason", { n: 3 }) : null}
               onClick={() => void decide(l.id, true)}
             >
               {t("staff.leave.approve")}
-            </button>
-            <button
-              disabled={(notes[l.id] ?? "").trim().length < 3}
+            </Btn>
+            <Btn
+              why={(notes[l.id] ?? "").trim().length < 3 ? t("why.reason", { n: 3 }) : null}
               onClick={() => void decide(l.id, false)}
             >
               {t("staff.leave.reject")}
-            </button>
+            </Btn>
           </div>
         </div>
       ))}

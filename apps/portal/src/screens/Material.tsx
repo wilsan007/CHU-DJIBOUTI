@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { api } from "../api.ts";
 import { label, t } from "../i18n.ts";
-import { ErrorBox, Notice } from "../ui.tsx";
+import { ErrorBox, Notice, Btn } from "../ui.tsx";
 import { ItemPicker, type Item } from "./Stock.tsx";
 
 interface Depot {
@@ -152,13 +152,13 @@ export function Material(): ReactNode {
           <input value={reason} onChange={(e) => setReason(e.target.value)} />
         </label>
         <ErrorBox error={error} />
-        <button
+        <Btn
           className="primary"
-          disabled={!item || !qty.trim() || reason.trim().length < 3}
+          why={!item || !qty.trim() || reason.trim().length < 3 ? t("why.fields") : null}
           onClick={() => void submit()}
         >
           {t("material.use")}
-        </button>
+        </Btn>
       </div>
     </section>
   );

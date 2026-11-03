@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api } from "../api.ts";
 import { t } from "../i18n.ts";
-import { ErrorBox, fdj, Notice, confirmAction } from "../ui.tsx";
+import { ErrorBox, fdj, Notice, confirmAction, Btn } from "../ui.tsx";
 
 interface Invoice {
   id: string;
@@ -173,9 +173,13 @@ function CloseSession({
           value={counted}
           onChange={(e) => setCounted(e.target.value.replace(/\D/g, ""))}
         />
-        <button className="primary" disabled={counted === ""} onClick={() => void close()}>
+        <Btn
+          className="primary"
+          why={counted === "" ? t("why.counted") : null}
+          onClick={() => void close()}
+        >
           {t("cashier.close.go")}
-        </button>
+        </Btn>
       </div>
       <ErrorBox error={error} />
     </details>
@@ -214,9 +218,12 @@ function PaidRow({
           value={reason}
           onChange={(e) => setReason(e.target.value)}
         />
-        <button disabled={reason.trim().length < 5} onClick={() => void credit()}>
+        <Btn
+          why={reason.trim().length < 5 ? t("why.reason", { n: 5 }) : null}
+          onClick={() => void credit()}
+        >
           {t("cashier.credit.go")}
-        </button>
+        </Btn>
       </div>
       <ErrorBox error={error} />
     </li>
@@ -308,9 +315,12 @@ function InvoiceCard({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />
-          <button onClick={() => void discount()} disabled={!percent || reason.trim().length < 3}>
+          <Btn
+            onClick={() => void discount()}
+            why={!percent || reason.trim().length < 3 ? t("why.fields") : null}
+          >
             {t("cashier.apply")}
-          </button>
+          </Btn>
         </div>
       </details>
       <div className="inline">
@@ -323,14 +333,14 @@ function InvoiceCard({
           <option value="mobile">{t("cashier.method.mobile")}</option>
           <option value="card">{t("cashier.method.card")}</option>
         </select>
-        <button
+        <Btn
           className="primary"
-          disabled={!canPay}
+          why={!canPay ? t("cashier.needSession") : null}
           title={canPay ? undefined : t("cashier.needSession")}
           onClick={() => void pay()}
         >
           {t("cashier.pay")} {fdj(invoice.amountDue)}
-        </button>
+        </Btn>
       </div>
       <ErrorBox error={error} />
     </article>

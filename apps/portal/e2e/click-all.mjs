@@ -37,7 +37,7 @@ try {
         events.push({ kind: "console", text: m.text().slice(0, 200) });
     });
     page.on("response", (r) => {
-      if (r.status() >= 400 && !/\/api\/staff\/me$/.test(r.url()) && r.request().method() !== "GET")
+      if (r.status() >= 400 && r.request().method() !== "GET")
         events.push({
           kind: r.status() >= 500 ? "5xx" : "4xx",
           text: `${r.status()} ${r.request().method()} ${new URL(r.url()).pathname}`,

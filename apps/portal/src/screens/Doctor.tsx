@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, can } from "../api.ts";
 import { label, t } from "../i18n.ts";
-import { ErrorBox, Notice } from "../ui.tsx";
+import { ErrorBox, Notice, Btn } from "../ui.tsx";
 import { ConsultationPanel } from "./Consultation.tsx";
 import { DicomStudies, openImage, type Study } from "./Imaging.tsx";
 
@@ -247,9 +247,9 @@ function AddAllergy({
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
-        <button disabled={!cls.trim() || !text.trim()} onClick={() => void add()}>
+        <Btn why={!cls.trim() || !text.trim() ? t("why.fields") : null} onClick={() => void add()}>
           {t("consult.vital.add")}
-        </button>
+        </Btn>
       </div>
       <ErrorBox error={error} />
     </details>
@@ -376,13 +376,21 @@ function OrderForm({ entry, onSent }: { entry: Entry; onSent: (m: string) => voi
         </label>
       )}
       <ErrorBox error={error} />
-      <button
+      <Btn
         className="primary"
-        disabled={picked.size === 0 || !entry.encounterId || (emergency && why.trim().length < 10)}
+        why={
+          picked.size === 0
+            ? t("why.picks")
+            : !entry.encounterId
+              ? t("why.noEncounter")
+              : emergency && why.trim().length < 10
+                ? t("why.emergencyWhy")
+                : null
+        }
         onClick={() => void send()}
       >
         {t("doctor.send")}
-      </button>
+      </Btn>
     </div>
   );
 }

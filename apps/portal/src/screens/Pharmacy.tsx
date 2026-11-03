@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, ApiError } from "../api.ts";
 import { t } from "../i18n.ts";
-import { ErrorBox, Notice, ScrollTable } from "../ui.tsx";
+import { ErrorBox, Notice, ScrollTable, Btn } from "../ui.tsx";
 
 interface Summary {
   id: string;
@@ -97,9 +97,9 @@ function Prescriptions(): ReactNode {
               autoComplete="off"
             />
           </label>
-          <button disabled={!scan.trim()} onClick={() => void verify()}>
+          <Btn why={!scan.trim() ? t("why.rxcode") : null} onClick={() => void verify()}>
             {t("pharmacy.verify.go")}
-          </button>
+          </Btn>
           {list.length === 0 && <p className="muted empty">{t("pharmacy.empty")}</p>}
           <ul className="list">
             {list.map((p) => (
@@ -272,9 +272,13 @@ function Dispense({ id, onDone }: { id: string; onDone: (message: string) => voi
             </select>
           </label>
           <ErrorBox error={error} />
-          <button className="primary" disabled={!depot} onClick={() => void dispense()}>
+          <Btn
+            className="primary"
+            why={!depot ? t("why.depot") : null}
+            onClick={() => void dispense()}
+          >
             {t("pharmacy.dispense")}
-          </button>
+          </Btn>
         </>
       )}
       {!open && <p className="muted">{t(`pharmacy.status.${status.status}`)}</p>}

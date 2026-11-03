@@ -264,14 +264,16 @@ export async function consultationOfEncounter(
   db: Db,
   ctx: RequestContext,
   encounterId: string,
-): Promise<Consultation> {
+): Promise<Consultation | null> {
+  // Admission inconnue : 404. Admission connue sans consultation commencée : état normal, rendu « vide » (pas une erreur).
+  await getEncounter(db, encounterId);
   const res = await db.query<{ id: string }>(
     `select id from clinical.consultations where encounter_id = $1
       order by (status = 'draft') desc, opened_at desc limit 1`,
     [encounterId],
   );
   const row = res.rows[0];
-  if (!row) throw notFound("Consultation");
+  if (!row) return null;
   return getConsultation(db, ctx, row.id);
 }
 

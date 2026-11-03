@@ -79,7 +79,11 @@ export async function registerClinicalRoutes(app: FastifyInstance, db: Db): Prom
   app.get(
     "/api/encounters/:id/consultation",
     { preHandler: requirePermission("clinical:read") },
-    async (request) => consultationOfEncounter(db, contextOf(request), id(request)),
+    async (request, reply) => {
+      const found = await consultationOfEncounter(db, contextOf(request), id(request));
+      // 204 : l'admission existe mais aucune consultation n'est commencée (le panneau propose de la commencer).
+      return found ?? reply.status(204).send();
+    },
   );
   app.get(
     "/api/consultations/:id",

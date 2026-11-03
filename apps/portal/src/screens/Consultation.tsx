@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, ApiError, can } from "../api.ts";
 import { label, t } from "../i18n.ts";
-import { ErrorBox, Notice, confirmAction, ScrollTable } from "../ui.tsx";
+import { ErrorBox, Notice, confirmAction, ScrollTable, Btn } from "../ui.tsx";
 
 interface Vital {
   kind: string;
@@ -54,10 +54,12 @@ export function ConsultationPanel({
 
   const load = useCallback(async () => {
     try {
-      setConsultation(await api<Consultation>(`/api/encounters/${encounterId}/consultation`));
+      // Réponse vide (204) : aucune consultation commencée pour cette admission.
+      setConsultation(
+        (await api<Consultation | null>(`/api/encounters/${encounterId}/consultation`)) ?? null,
+      );
     } catch (e) {
-      if (e instanceof ApiError && e.status === 404) setConsultation(null);
-      else setError(e);
+      setError(e);
     }
   }, [encounterId]);
   useEffect(() => {
@@ -316,12 +318,12 @@ function Vitals({
               setError(null);
             }}
           />
-          <button
-            disabled={!value.trim() || Number.isNaN(Number(value))}
+          <Btn
+            why={!value.trim() || Number.isNaN(Number(value)) ? t("why.number") : null}
             onClick={() => void add(false)}
           >
             {t("consult.vital.add")}
-          </button>
+          </Btn>
         </div>
       )}
       <ErrorBox error={error} />
@@ -640,12 +642,12 @@ function Prescription({
       ))}
       <ErrorBox error={error} />
       <div className="actions">
-        <button disabled={!valid} onClick={() => void check()}>
+        <Btn why={!valid ? t("why.rx") : null} onClick={() => void check()}>
           {t("rx.check")}
-        </button>
-        <button className="primary" disabled={!valid} onClick={() => void sign()}>
+        </Btn>
+        <Btn className="primary" why={!valid ? t("why.rx") : null} onClick={() => void sign()}>
           {t("rx.sign")}
-        </button>
+        </Btn>
       </div>
     </div>
   );
@@ -674,9 +676,13 @@ function CloseButton({
   return (
     <div>
       <ErrorBox error={error} />
-      <button className="primary" disabled={disabled} onClick={() => void close()}>
+      <Btn
+        className="primary"
+        why={disabled ? t("why.diagnosis") : null}
+        onClick={() => void close()}
+      >
         {t("consult.close")}
-      </button>
+      </Btn>
     </div>
   );
 }

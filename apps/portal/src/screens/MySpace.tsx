@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { api, ApiError } from "../api.ts";
+import { api } from "../api.ts";
 import { t } from "../i18n.ts";
-import { ErrorBox, Notice } from "../ui.tsx";
+import { ErrorBox, Notice, Btn } from "../ui.tsx";
 
 interface Mine {
   member: {
@@ -29,10 +29,10 @@ export function MySpace(): ReactNode {
 
   const load = useCallback(async () => {
     try {
-      setMine(await api<Mine>("/api/staff/me"));
+      // Réponse vide (204) : ce compte n'a pas de fiche du personnel.
+      setMine((await api<Mine | null>("/api/staff/me")) ?? null);
     } catch (e) {
-      if (e instanceof ApiError && e.status === 404) setMine(null);
-      else setError(e);
+      setError(e);
     }
   }, []);
   useEffect(() => {
@@ -140,13 +140,13 @@ export function MySpace(): ReactNode {
               {t("common.reason")}
               <input value={f.reason} onChange={(e) => setF({ ...f, reason: e.target.value })} />
             </label>
-            <button
+            <Btn
               className="primary"
-              disabled={!f.startsOn || !f.endsOn}
+              why={!f.startsOn || !f.endsOn ? t("why.fields") : null}
               onClick={() => void request()}
             >
               {t("staff.leave.request")}
-            </button>
+            </Btn>
           </div>
         </div>
       )}
