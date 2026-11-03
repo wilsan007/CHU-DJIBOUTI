@@ -1,0 +1,54 @@
+# Derrière le mandataire de Fly (HTTPS terminé en amont). Variables : API_UPSTREAM, IDP_UPSTREAM (noms .internal de Fly).
+server_tokens off;
+limit_req_zone $http_fly_client_ip zone=general:10m rate=20r/s;
+limit_req_zone $http_fly_client_ip zone=otp:10m rate=10r/m;
+map $request_uri $login_key {
+  default "";
+  ~^/auth/realms/[^/]+/login-actions/authenticate $http_fly_client_ip;
+  ~^/auth/realms/[^/]+/protocol/openid-connect/token $http_fly_client_ip;
+}
+limit_req_zone $login_key zone=login:10m rate=30r/m;
+resolver 172.19.0.2 valid=10s ipv6=on; # résolveur interne de Fly : les noms .internal changent d'adresse
+server {
+  listen 8080;
+  # Redirection HTTP -> HTTPS (Fly indique le protocole d'origine).
+  if ($http_x_forwarded_proto = "http") { return 301 https://$host$request_uri; }
+  add_header Strict-Transport-Security "max-age=31536000" always;
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header X-Frame-Options "DENY" always;
+  add_header Referrer-Policy "no-referrer" always;
+  add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+  add_header Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'" always;
+  limit_req zone=general burst=40 nodelay;
+  set $api http://${API_UPSTREAM};
+  set $idp http://${IDP_UPSTREAM};
+  location = /metrics { return 404; }
+  location /api/portal/otp/ {
+    limit_req zone=otp burst=5 nodelay;
+    proxy_pass $api;
+    proxy_set_header X-Forwarded-For $http_fly_client_ip;
+    client_max_body_size 4k;
+  }
+  location /api/ {
+    proxy_pass $api;
+    proxy_set_header X-Request-Id $request_id;
+    proxy_set_header X-Forwarded-For $http_fly_client_ip;
+    client_max_body_size 17m;
+  }
+  location = /health { proxy_pass $api; }
+  location /auth/ {
+    limit_req zone=login burst=15 nodelay;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer" always;
+    proxy_pass $idp;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-For $http_fly_client_ip;
+    proxy_buffer_size 16k;
+    proxy_buffers 8 16k;
+  }
+  root /usr/share/nginx/html;
+  location /assets/ { expires max; try_files $uri =404; }
+  location / { expires -1; try_files $uri /index.html; }
+}

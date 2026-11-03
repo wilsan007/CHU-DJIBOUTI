@@ -1,0 +1,16 @@
+app = "chu-djibouti-idp"
+primary_region = "cdg"
+
+[build]
+  dockerfile = "keycloak.Dockerfile"
+
+[env]
+  KC_HOSTNAME = "https://chu-djibouti-edge.fly.dev/auth"
+  KC_HTTP_PORT = "8080"
+
+# Réseau privé seulement (atteint via le point d'entrée sous /auth).
+[[services]]
+  internal_port = 8080
+  protocol = "tcp"
+  auto_stop_machines = "off"
+  min_machines_running = 1

@@ -1,0 +1,23 @@
+app = "chu-djibouti-edge"
+primary_region = "cdg"
+
+[build]
+  dockerfile = "edge.Dockerfile"
+  [build.args]
+    VITE_OIDC_AUTHORITY = "https://chu-djibouti-edge.fly.dev/auth/realms/chu"
+    VITE_ENV_BANNER = "DÉMONSTRATION : données fictives"
+
+[env]
+  API_UPSTREAM = "chu-djibouti-api.internal:3000"
+  IDP_UPSTREAM = "chu-djibouti-idp.internal:8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"
+  min_machines_running = 1
+  [[http_service.checks]]
+    method = "GET"
+    path = "/"
+    interval = "15s"
+    timeout = "5s"

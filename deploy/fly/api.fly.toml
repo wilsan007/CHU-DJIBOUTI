@@ -1,0 +1,27 @@
+app = "chu-djibouti-api"
+primary_region = "cdg" # Paris : région la plus proche de Djibouti proposée par Fly (à confirmer avec la direction)
+
+[build]
+  dockerfile = "api.Dockerfile"
+
+[deploy]
+  # Migrations avant chaque mise en ligne (rôle propriétaire ; secret DATABASE_MIGRATOR_URL).
+  release_command = "node src/migrate-cli.ts"
+
+[env]
+  PORT = "3000"
+  LOG_LEVEL = "info"
+  TRUST_PROXY = "true"
+  KEYCLOAK_REALM = "chu"
+  AUTH_AUDIENCE = "chu-api"
+
+# Réseau privé seulement : aucune exposition publique, seul le point d'entrée (chu-djibouti-edge) lui parle.
+[[services]]
+  internal_port = 3000
+  protocol = "tcp"
+  auto_stop_machines = "off"
+  min_machines_running = 1
+  [[services.http_checks]]
+    path = "/health"
+    interval = "15s"
+    timeout = "5s"
