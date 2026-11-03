@@ -10,7 +10,7 @@ W="$(mktemp -d)"
 cleanup() { docker rm -f chu-nginx-test >/dev/null 2>&1 || true; pkill -f "http-port=8082" 2>/dev/null || true; fuser -k 3101/tcp >/dev/null 2>&1 || true; rm -rf "$W"; pnpm --filter @chu/portal build >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 cp -r "$KEYCLOAK_HOME" "$W/kc"; rm -rf "$W/kc/data/h2" "$W/kc/data/transaction-logs"; mkdir -p "$W/kc/data/import"; cp infra/keycloak/realm-chu.json "$W/kc/data/import/"
-( cd "$W/kc" && CHU_DEV_USER_PASSWORD="$D" CHU_ADMIN_CLIENT_SECRET=essai KC_BOOTSTRAP_ADMIN_USERNAME=admin KC_BOOTSTRAP_ADMIN_PASSWORD="adm-$D" \
+( cd "$W/kc" && CHU_DEV_USER_PASSWORD="$D" CHU_ADMIN_CLIENT_SECRET=essai CHU_LAB_BRIDGE_SECRET=essai KC_BOOTSTRAP_ADMIN_USERNAME=admin KC_BOOTSTRAP_ADMIN_PASSWORD="adm-$D" \
   setsid nohup bin/kc.sh start-dev --import-realm --http-port=8082 --http-host=0.0.0.0 --http-relative-path=/auth \
   --hostname=https://localhost:8443/auth --proxy-headers=xforwarded > "$W/kc.log" 2>&1 < /dev/null & )
 until curl -fs http://localhost:8082/auth/realms/chu >/dev/null 2>&1; do sleep 2; done

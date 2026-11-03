@@ -1,0 +1,11 @@
+{
+  "name": "@chu/lab-bridge",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Pont entre les automates de laboratoire (ASTM E1381/E1394, HL7 v2 MLLP) et l'API du CHU, avec file d'attente durable",
+  "scripts": {
+    "start": "node src/main.ts",
+    "requeue": "node src/main.ts --requeue"
+  }
+}

@@ -114,6 +114,30 @@
       "fullScopeAllowed": false
     },
     {
+      "clientId": "chu-lab-bridge",
+      "name": "Pont des automates de laboratoire (compte de service, rôle lab seulement)",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "${CHU_LAB_BRIDGE_SECRET}",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "name": "chu-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "chu-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ],
+      "fullScopeAllowed": false
+    },
+    {
       "clientId": "chu-admin-api",
       "name": "Gestion des comptes par l'API (compte de service)",
       "enabled": true,
@@ -304,6 +328,12 @@
       "email": "dev-doctor2@chu.invalid"
     },
     {
+      "username": "service-account-chu-lab-bridge",
+      "enabled": true,
+      "serviceAccountClientId": "chu-lab-bridge",
+      "realmRoles": ["lab"]
+    },
+    {
       "username": "service-account-chu-admin-api",
       "enabled": true,
       "serviceAccountClientId": "chu-admin-api",
@@ -377,6 +407,10 @@
         "storekeeper",
         "hr"
       ]
+    },
+    {
+      "client": "chu-lab-bridge",
+      "roles": ["lab"]
     },
     {
       "client": "chu-dev-cli",

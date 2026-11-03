@@ -19,6 +19,7 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?}
       CHU_DEV_USER_PASSWORD: ${CHU_DEV_USER_PASSWORD:?mot de passe des comptes fictifs de développement}
       CHU_ADMIN_CLIENT_SECRET: ${CHU_ADMIN_CLIENT_SECRET:?}
+      CHU_LAB_BRIDGE_SECRET: ${CHU_LAB_BRIDGE_SECRET:?}
     volumes: [../keycloak/realm-chu.json:/opt/keycloak/data/import/realm-chu.json:ro]
     networks: [interne]
 

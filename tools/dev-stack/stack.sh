@@ -15,9 +15,9 @@ rand() { head -c8 /dev/urandom | od -An -tx1 | tr -d ' \n'; }
 start() {
   : "${KEYCLOAK_HOME:?KEYCLOAK_HOME doit pointer vers keycloak-26.x (archive décompressée)}"
   mkdir -p "$STACK_DIR"
-  local admin dev kcadmin
-  admin="$(rand)"; dev="Dev-$(rand)-Aa1"; kcadmin="adm-$(rand)"
-  printf '%s' "$admin" > "$STACK_DIR/pg_admin"; printf '%s' "$dev" > "$STACK_DIR/dev_password"; printf '%s' "$kcadmin" > "$STACK_DIR/admin_client_secret"
+  local admin dev kcadmin bridge
+  admin="$(rand)"; dev="Dev-$(rand)-Aa1"; kcadmin="adm-$(rand)"; bridge="br-$(rand)"
+  printf '%s' "$admin" > "$STACK_DIR/pg_admin"; printf '%s' "$dev" > "$STACK_DIR/dev_password"; printf '%s' "$kcadmin" > "$STACK_DIR/admin_client_secret"; printf '%s' "$bridge" > "$STACK_DIR/lab_bridge_secret"
 
   docker rm -f chu-pg >/dev/null 2>&1 || true
   docker run -d --name chu-pg -e POSTGRES_PASSWORD="$admin" -p "127.0.0.1:$PG_PORT:5432" "$PG_IMAGE" >/dev/null
@@ -30,7 +30,7 @@ start() {
   rm -rf "$KEYCLOAK_HOME/data/h2" "$KEYCLOAK_HOME/data/transaction-logs"
   mkdir -p "$KEYCLOAK_HOME/data/import"; cp "$ROOT/infra/keycloak/realm-chu.json" "$KEYCLOAK_HOME/data/import/"
   # `exec` remplace le sous-shell par le service : aucun processus intermédiaire ne garde la sortie du script ouverte.
-  ( cd "$KEYCLOAK_HOME" && CHU_DEV_USER_PASSWORD="$dev" CHU_ADMIN_CLIENT_SECRET="$kcadmin" KC_BOOTSTRAP_ADMIN_USERNAME=admin KC_BOOTSTRAP_ADMIN_PASSWORD="adm-$dev" \
+  ( cd "$KEYCLOAK_HOME" && CHU_DEV_USER_PASSWORD="$dev" CHU_ADMIN_CLIENT_SECRET="$kcadmin" CHU_LAB_BRIDGE_SECRET="$bridge" KC_BOOTSTRAP_ADMIN_USERNAME=admin KC_BOOTSTRAP_ADMIN_PASSWORD="adm-$dev" \
     exec setsid nohup bin/kc.sh start-dev --import-realm --http-port="$KC_PORT" --http-host=0.0.0.0 > "$STACK_DIR/keycloak.log" 2>&1 < /dev/null ) &
   until curl -fs "http://localhost:$KC_PORT/realms/chu" >/dev/null 2>&1; do sleep 2; done
 
