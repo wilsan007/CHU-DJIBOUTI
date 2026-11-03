@@ -37,6 +37,8 @@ export const InvoiceListSchema = z.object({
   patientId: z.string().uuid().optional(),
   orderNumber: z.string().trim().max(30).optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
+  /** Les plus récentes d'abord (écran de caisse : factures payées du jour pour un avoir). */
+  newest: z.enum(["true", "false"]).default("false"),
 });
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);

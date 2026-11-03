@@ -1,10 +1,6 @@
+import { esc } from "../../common/html.ts";
+import { qrSvg } from "../../common/qr.ts";
 import type { Prescription } from "./service.ts";
-
-const esc = (s: string): string =>
-  s.replace(
-    /[&<>"']/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string,
-  );
 
 const ROUTE: Record<string, { fr: string; ar: string }> = {
   oral: { fr: "voie orale", ar: "فموي" },
@@ -41,6 +37,6 @@ export function renderPrescription(input: { prescription: Prescription; payload:
 <p>التاريخ : ${esc(date)}<br>المريض : ${esc(name)} (${esc(id)})<br>الطبيب : ${esc(p.prescriber.name ?? p.prescriber.id)}</p>
 <ol>${ar}</ol></td>
 </tr></table>
-<p>Code de vérification (à encoder en QR) : <code>${esc(input.payload)}</code></p>
+<div style="display:flex;align-items:center;gap:12px"><div data-qr="prescription">${qrSvg(input.payload, 140)}</div><p>Code de vérification (la pharmacie le scanne) : <code>${esc(input.payload)}</code></p></div>
 </body></html>`;
 }

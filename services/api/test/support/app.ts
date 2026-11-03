@@ -6,6 +6,7 @@ import { Dispatcher } from "../../src/events/dispatcher.ts";
 import { createTokenVerifier } from "../../src/auth/jwt.ts";
 import type { Role } from "../../src/auth/permissions.ts";
 import type { Db } from "../../src/db.ts";
+import type { PortalConfig } from "../../src/modules/portal/service.ts";
 import type { PacsConfig } from "../../src/modules/imaging/pacs.ts";
 import type { UserDirectory } from "../../src/modules/admin/directory.ts";
 
@@ -28,7 +29,11 @@ export interface TestApp {
 
 export async function createTestApp(
   db: Db,
-  options: { directory?: UserDirectory; pacs?: PacsConfig | null } = {},
+  options: {
+    directory?: UserDirectory;
+    pacs?: PacsConfig | null;
+    portal?: PortalConfig | null;
+  } = {},
 ): Promise<TestApp> {
   const { publicKey, privateKey } = await generateKeyPair("RS256");
   const jwk: JWK = { ...(await exportJWK(publicKey)), kid: "test-key", alg: "RS256", use: "sig" };
@@ -42,6 +47,7 @@ export async function createTestApp(
     verifier,
     directory: options.directory ?? null,
     pacs: options.pacs ?? null,
+    portal: options.portal ?? null,
   });
   const dispatcher = new Dispatcher({ db, consumers: allConsumers(), baseDelayMs: 1 });
   await app.ready();

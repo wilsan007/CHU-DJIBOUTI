@@ -16,17 +16,20 @@ interface Invoice {
 export function Cashier(): ReactNode {
   const [session, setSession] = useState<{ id: string } | null | undefined>(undefined);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [paid, setPaid] = useState<Invoice[]>([]);
   const [error, setError] = useState<unknown>(null);
   const [notice, setNotice] = useState("");
 
   const load = useCallback(async () => {
     try {
-      const [s, i] = await Promise.all([
+      const [s, i, p] = await Promise.all([
         api<{ session: { id: string } | null }>("/api/billing/cash-sessions/current"),
         api<{ invoices: Invoice[] }>("/api/billing/invoices?status=pending"),
+        api<{ invoices: Invoice[] }>("/api/billing/invoices?status=paid&newest=true&limit=20"),
       ]);
       setSession(s.session);
       setInvoices(i.invoices);
+      setPaid(p.invoices);
     } catch (e) {
       setError(e);
     }
@@ -58,6 +61,15 @@ export function Cashier(): ReactNode {
         </button>
       )}
       {session && <p className="muted">{t("cashier.sessionOpen")}</p>}
+      {session && (
+        <CloseSession
+          sessionId={session.id}
+          onClosed={(m) => {
+            setNotice(m);
+            void load();
+          }}
+        />
+      )}
       {invoices.length === 0 && <p className="muted">{t("common.none")}</p>}
       <div className="grid">
         {invoices.map((inv) => (
@@ -73,7 +85,111 @@ export function Cashier(): ReactNode {
           />
         ))}
       </div>
+      <details className="card" data-credit-section>
+        <summary>{t("cashier.credit.title")}</summary>
+        <p className="muted">{t("cashier.credit.hint")}</p>
+        {paid.length === 0 && <p className="muted">{t("common.none")}</p>}
+        <ul className="plain">
+          {paid.map((inv) => (
+            <PaidRow
+              key={inv.id}
+              invoice={inv}
+              onCredited={(n) => {
+                setNotice(t("cashier.credit.done", { number: n }));
+                void load();
+              }}
+            />
+          ))}
+        </ul>
+      </details>
     </section>
+  );
+}
+
+function CloseSession({
+  sessionId,
+  onClosed,
+}: {
+  sessionId: string;
+  onClosed: (message: string) => void;
+}): ReactNode {
+  const [counted, setCounted] = useState("");
+  const [error, setError] = useState<unknown>(null);
+  const close = async (): Promise<void> => {
+    setError(null);
+    try {
+      const r = await api<{ expectedCash: number; countedCash: number; difference: number }>(
+        `/api/billing/cash-sessions/${sessionId}/close`,
+        { method: "POST", body: { countedCash: Number(counted) } },
+      );
+      onClosed(
+        t("cashier.close.done", {
+          expected: r.expectedCash,
+          counted: r.countedCash,
+          difference: r.difference,
+        }),
+      );
+    } catch (e) {
+      setError(e);
+    }
+  };
+  return (
+    <details data-close-session>
+      <summary>{t("cashier.close.title")}</summary>
+      <div className="inline">
+        <input
+          aria-label={t("cashier.close.counted")}
+          placeholder={t("cashier.close.counted")}
+          inputMode="numeric"
+          value={counted}
+          onChange={(e) => setCounted(e.target.value.replace(/\D/g, ""))}
+        />
+        <button className="primary" disabled={counted === ""} onClick={() => void close()}>
+          {t("cashier.close.go")}
+        </button>
+      </div>
+      <ErrorBox error={error} />
+    </details>
+  );
+}
+
+function PaidRow({
+  invoice,
+  onCredited,
+}: {
+  invoice: Invoice;
+  onCredited: (creditNumber: string) => void;
+}): ReactNode {
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<unknown>(null);
+  const credit = async (): Promise<void> => {
+    setError(null);
+    try {
+      const r = await api<{ creditNote: { number: string } }>(
+        `/api/billing/invoices/${invoice.id}/credit-note`,
+        { method: "POST", body: { reason } },
+      );
+      onCredited(r.creditNote.number);
+    } catch (e) {
+      setError(e);
+    }
+  };
+  return (
+    <li data-paid-invoice={invoice.number}>
+      <strong>{invoice.number}</strong> {invoice.patient?.name} · {fdj(invoice.patientAmount)}
+      <div className="inline">
+        <input
+          aria-label={t("cashier.credit.reason")}
+          placeholder={t("cashier.credit.reason")}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+        />
+        <button disabled={reason.trim().length < 5} onClick={() => void credit()}>
+          {t("cashier.credit.go")}
+        </button>
+      </div>
+      <ErrorBox error={error} />
+    </li>
   );
 }
 

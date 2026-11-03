@@ -141,3 +141,10 @@ export async function kcAdmin(method, path, body) {
   const text = await res.text();
   return text ? JSON.parse(text) : null;
 }
+
+/** Remise à zéro des alertes de valeur critique d'un compte (les scénarios précédents en laissent) pour que le test ne lise que les siennes. */
+export async function clearCriticalNotifications(user) {
+  const { data } = await api(user, "/api/lab/notifications?open=true");
+  for (const n of data?.notifications ?? [])
+    await api(user, `/api/lab/notifications/${n.id}/acknowledge`, { method: "POST", body: {} });
+}

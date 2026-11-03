@@ -2,7 +2,7 @@
   "name": "chu-djibouti-his",
   "private": true,
   "version": "0.0.0",
-  "description": "Plateforme hospitali\u00e8re du CHU de Djibouti (socle Bahmni + couche d'int\u00e9gration et portail)",
+  "description": "Plateforme hospitalière du CHU de Djibouti (socle Bahmni + couche d'intégration et portail)",
   "license": "UNLICENSED",
   "type": "module",
   "packageManager": "pnpm@10.28.0",
@@ -23,6 +23,8 @@
     "@eslint/js": "^10.0.1",
     "@types/node": "^26.6.6",
     "eslint": "^10.14.0",
+    "jsqr": "^1.4.0",
+    "pngjs": "^7.0.0",
     "prettier": "^3.9.10",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.1"

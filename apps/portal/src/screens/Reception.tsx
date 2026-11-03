@@ -30,6 +30,12 @@ interface Act {
   tariff: number;
 }
 
+/** Ouvre la carte imprimable (avec son QR) dans un nouvel onglet : l'agent imprime depuis le navigateur. */
+async function printCard(ref: string): Promise<void> {
+  const r = await api<{ html: string }>(`/api/patients/${ref}/card/print`);
+  window.open(URL.createObjectURL(new Blob([r.html], { type: "text/html" })), "_blank");
+}
+
 const nameOf = (p: Patient): string => [p.givenName, p.familyName].filter(Boolean).join(" ");
 
 export function Reception(): ReactNode {
@@ -271,6 +277,9 @@ function Admission({
       <h2>
         {nameOf(patient)} <span className="muted">{patient.identifier}</span>
       </h2>
+      <button data-print-card onClick={() => void printCard(patient.id)}>
+        {t("reception.printCard")}
+      </button>
       <label>
         {t("reception.department")}
         <select value={dept} onChange={(e) => setDept(e.target.value)}>

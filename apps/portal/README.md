@@ -45,6 +45,8 @@ apps/portal/e2e/run-all.sh                # tout rejouer d'un coup (lit les secr
 node apps/portal/e2e/responsive.mjs     # téléphone 360 px et tablette 768 px, français et arabe : aucun débordement
 node apps/portal/e2e/pacs.mjs           # imagerie DICOM avec un vrai Orthanc (voir infra/orthanc/README.md pour les variables)
 node apps/portal/e2e/lab-bridge.mjs     # automates ASTM/HL7 simulés → pont → API
+node apps/portal/e2e/patient-portal.mjs   # espace patient /patient : code SMS, rendez-vous, résultats, factures (variables en tête du script)
+node apps/portal/e2e/caisse-qr.mjs        # carte et étiquette : QR photographié et décodé ; avoir et clôture de caisse
 node apps/portal/e2e/direction-admin.mjs # tableau de bord de direction et administration des comptes
 ```
 

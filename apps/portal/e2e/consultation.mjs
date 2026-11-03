@@ -1,7 +1,16 @@
 // Écran de consultation du médecin, dans un vrai navigateur : dossier, constantes, diagnostics, ordonnance avec
 // alertes, demande d'analyse payée à la caisse, valeur critique avec accusé, clôture.
 import assert from "node:assert/strict";
-import { api, cardPayload, chromium, importCatalogs, login, shot, sleep } from "./lib.mjs";
+import {
+  api,
+  cardPayload,
+  chromium,
+  clearCriticalNotifications,
+  importCatalogs,
+  login,
+  shot,
+  sleep,
+} from "./lib.mjs";
 
 const until = async (fn, what, tries = 40) => {
   for (let i = 0; i < tries; i += 1) {
@@ -19,6 +28,7 @@ const PAR = `ZP${suffix}`;
 const browser = await chromium.launch();
 try {
   await importCatalogs();
+  await clearCriticalNotifications("dev-doctor");
   await api("dev-admin", "/api/catalog/drugs/import", {
     method: "POST",
     csv: `code,dci,forme,dosage,libelle_ar,classe_allergie,classe_interaction,responsable,date_maj\n${AMO},Amoxicilline,Gélule,500 mg,أموكسيسيلين,penicillin,,Pharmacien test,2026-11-01\n${PAR},Paracétamol,Comprimé,500 mg,باراسيتامول,,,Pharmacien test,2026-11-01\n`,
@@ -110,7 +120,7 @@ try {
   await panel.locator("button:has-text('Enregistrer le brouillon')").click();
   await doc.locator("[role=alert]:has-text('modifié entre-temps')").waitFor();
   assert.ok(
-    (await doc.locator("[role=alert]").first().textContent()).includes(
+    (await doc.locator("[role=alert]:has-text('modifié entre-temps')").textContent()).includes(
       "Note ajoutée depuis un autre poste",
     ),
     "la version enregistrée est montrée",

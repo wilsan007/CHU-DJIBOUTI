@@ -7,6 +7,8 @@ import { appendEvent } from "../../events/outbox.ts";
 import { checkDigits, parseCardPayload } from "../identity/card.ts";
 import { patientSummaries, relatedPatientIds } from "../identity/interface.ts";
 import { completeTicketIn, startTicketIn, ticketContext } from "../orders/service.ts";
+import { esc } from "../../common/html.ts";
+import { qrSvg } from "../../common/qr.ts";
 import { renderReport } from "./report.ts";
 
 export type Flag = "normal" | "low" | "high" | "critical_low" | "critical_high" | "none";
@@ -545,9 +547,9 @@ export async function printLabel(db: Db, ctx: RequestContext, specimenId: string
   return {
     number: s.number,
     payload,
-    html: `<!doctype html><html><head><meta charset="utf-8"><title>Étiquette ${s.number}</title></head><body style="font-family:sans-serif;width:6cm">
-<strong>${(p?.name ?? "—").replace(/[<>&]/g, "")}</strong><br>${p?.identifier ?? ""} · ${p?.birthDate ?? ""} · ${p?.sex ?? ""}<br>${s.specimen_type} · ${s.request_number}<br>
-<code>${payload}</code><br><small>Code à encoder en code-barres (le rendu graphique reste à faire).</small></body></html>`,
+    html: `<!doctype html><html><head><meta charset="utf-8"><title>Étiquette ${esc(s.number)}</title><style>@page{size:6cm 4cm;margin:2mm}body{font-family:sans-serif;width:6cm;font-size:10px}</style></head><body>
+<strong>${esc(p?.name ?? "—")}</strong><br>${esc(p?.identifier ?? "")} · ${esc(p?.birthDate ?? "")} · ${esc(p?.sex ?? "")}<br>${esc(s.specimen_type)} · ${esc(s.request_number)}<br>
+<div data-qr="specimen">${qrSvg(payload, 96)}</div><code>${esc(payload)}</code></body></html>`,
   };
 }
 

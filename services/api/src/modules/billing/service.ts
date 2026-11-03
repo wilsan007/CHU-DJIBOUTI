@@ -835,7 +835,13 @@ export async function creditInvoice(
 
 export async function listInvoices(
   db: Db,
-  filter: { status?: string; patientId?: string; orderNumber?: string; limit: number },
+  filter: {
+    status?: string;
+    patientId?: string;
+    orderNumber?: string;
+    limit: number;
+    newest?: boolean;
+  },
 ): Promise<Invoice[]> {
   let patientIds: string[] | null = null;
   if (filter.patientId) {
@@ -847,7 +853,7 @@ export async function listInvoices(
         and ($1::text is null or status = $1)
         and ($2::uuid[] is null or patient_id = any($2))
         and ($3::text is null or order_number = $3)
-      order by issued_at, number limit $4`,
+      order by ${filter.newest ? "issued_at desc, number desc" : "issued_at, number"} limit $4`,
     [filter.status ?? null, patientIds, filter.orderNumber ?? null, filter.limit],
   );
   const invoices = res.rows.map(toInvoice);

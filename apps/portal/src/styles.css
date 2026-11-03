@@ -330,3 +330,15 @@ summary {
   border-radius: 6px;
   background: #000;
 }
+.slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.slots button {
+  min-width: 72px;
+}
+.patient main {
+  max-width: 960px;
+  margin-inline: auto;
+}

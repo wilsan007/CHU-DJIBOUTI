@@ -113,3 +113,22 @@ export async function getReminderContact(
   const r = res.rows[0];
   return r ? { phone: r.phone, optOut: r.reminder_opt_out } : null;
 }
+
+/**
+ * Dossier actif portant ce numéro de dossier (un dossier fusionné renvoie le dossier conservé). Sert à la connexion du
+ * portail patient : null si le numéro est inconnu, sans rien révéler de plus.
+ */
+export async function findActiveByIdentifier(
+  tx: Tx | Db,
+  identifier: string,
+): Promise<PatientSummary | null> {
+  const res = await tx.query<Row>(
+    `select id, identifier, kind, status, merged_into, given_name, family_name, birth_date, sex
+       from identity.patients where identifier = $1`,
+    [identifier],
+  );
+  const row = res.rows[0];
+  if (!row) return null;
+  if (row.status === "merged" && row.merged_into) return requireActivePatient(tx, row.merged_into);
+  return row.status === "active" ? summary(row) : null;
+}

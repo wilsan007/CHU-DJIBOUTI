@@ -14,6 +14,8 @@ import { checkAccount } from "./modules/admin/service.ts";
 import { registerDashboardRoutes } from "./modules/dashboard/routes.ts";
 import { registerHospitalizationRoutes } from "./modules/hospitalization/routes.ts";
 import type { PacsConfig } from "./modules/imaging/pacs.ts";
+import { registerPortalRoutes } from "./modules/portal/routes.ts";
+import type { PortalConfig } from "./modules/portal/service.ts";
 import { registerImagingRoutes } from "./modules/imaging/routes.ts";
 import { registerStaffRoutes } from "./modules/staff/routes.ts";
 import { registerStockRoutes } from "./modules/stock/routes.ts";
@@ -33,10 +35,22 @@ export interface AppDeps {
   logger?: boolean;
   /** Serveur d'images DICOM (Orthanc) ; absent ou null : les routes d'images DICOM répondent « non configuré ». */
   pacs?: PacsConfig | null;
+  /** Portail patient (code par SMS) ; absent : les routes `/api/portal/` ne sont pas ouvertes. */
+  portal?: PortalConfig | null;
+  /**
+   * Mandataire de confiance (Nginx) : l'adresse du client vient alors de X-Forwarded-For. Sans cela, derrière Nginx, tous
+   * les patients partageraient l'adresse du mandataire et les limites par adresse du portail seraient communes.
+   * Ne l'activer que si l'API n'est joignable QUE par le mandataire (sinon l'en-tête peut être falsifié).
+   */
+  trustProxy?: boolean | string;
 }
 
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
-  const app = Fastify({ logger: deps.logger ?? false, genReqId: () => randomUUID() });
+  const app = Fastify({
+    logger: deps.logger ?? false,
+    genReqId: () => randomUUID(),
+    ...(deps.trustProxy !== undefined ? { trustProxy: deps.trustProxy } : {}),
+  });
   app.decorateRequest("user", null);
   app.decorateRequest("requestId", "");
 
@@ -44,6 +58,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     request.requestId = request.id;
     void reply.header("x-request-id", request.id);
     if (!request.url.startsWith("/api/")) return;
+    // Portail patient : son authentification (code par SMS, session de patient) est faite par ses propres routes.
+    if (request.url.startsWith("/api/portal/")) return;
     const header = request.headers.authorization;
     if (!header?.startsWith("Bearer ")) {
       throw new DomainError("unauthenticated", "Connectez-vous pour continuer.", 401);
@@ -144,6 +160,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await registerStockRoutes(app, deps.db);
   await registerLabRoutes(app, deps.db);
   await registerImagingRoutes(app, deps.db, deps.pacs ?? null);
+  if (deps.portal) await registerPortalRoutes(app, deps.db, deps.portal);
   await registerHospitalizationRoutes(app, deps.db);
   await registerAdminRoutes(app, deps.db, deps.directory ?? null);
   await registerStaffRoutes(app, deps.db, deps.directory ?? null);

@@ -73,6 +73,7 @@ export async function registerBillingRoutes(app: FastifyInstance, db: Db): Promi
       return {
         invoices: await listInvoices(db, {
           limit: f.limit,
+          newest: f.newest === "true",
           ...(f.status ? { status: f.status } : {}),
           ...(f.patientId ? { patientId: f.patientId } : {}),
           ...(f.orderNumber ? { orderNumber: f.orderNumber } : {}),

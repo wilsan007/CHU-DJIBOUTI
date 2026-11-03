@@ -262,8 +262,9 @@ try {
   await disp.locator("button:has-text('Délivrer')").click();
   await ph.locator("[role=status]:has-text('partiellement servie')").waitFor();
   await ph.locator(`button[data-rx='${rx.number}']:has-text('partiellement servie')`).waitFor();
-  assert.equal(await disp.locator(`tr[data-line='${AMO}'] td`).nth(3).textContent(), "5");
-  assert.equal(await disp.locator(`tr[data-line='${PAR}'] td`).nth(3).textContent(), "0");
+  // La table se rafraîchit après le message de réussite : on attend la valeur au lieu de la lire tout de suite.
+  await disp.locator(`tr[data-line='${AMO}'] td:nth-child(4):text-is("5")`).waitFor();
+  await disp.locator(`tr[data-line='${PAR}'] td:nth-child(4):text-is("0")`).waitFor();
 
   // QR de l'ordonnance : le code saisi ouvre la bonne ordonnance.
   const printed = (await api("dev-pharmacy", `/api/prescriptions/${rx.id}/print`, { expect: 200 }))

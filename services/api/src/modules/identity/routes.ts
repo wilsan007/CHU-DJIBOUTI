@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { renderCardHtml } from "./card-print.ts";
 import { contextOf, parseWith, requirePermission } from "../../http.ts";
 import type { Db } from "../../db.ts";
 import {
@@ -77,6 +78,17 @@ export async function registerIdentityRoutes(app: FastifyInstance, db: Db): Prom
     async (request) => {
       const { ref } = request.params as { ref: string };
       return getCard(await getPatient(db, contextOf(request), ref));
+    },
+  );
+
+  // Carte imprimable avec son QR (le QR ne contient que l'identifiant et la clé de contrôle).
+  app.get(
+    "/api/patients/:ref/card/print",
+    { preHandler: requirePermission("patient:read") },
+    async (request) => {
+      const { ref } = request.params as { ref: string };
+      const patient = await getPatient(db, contextOf(request), ref);
+      return { identifier: patient.identifier, html: renderCardHtml(patient) };
     },
   );
 
