@@ -1,0 +1,24 @@
+name: Déployer sur Fly.io
+
+# Lancement MANUEL (onglet Actions → « Déployer sur Fly.io » → Run workflow). Prérequis : secret FLY_API_TOKEN du dépôt et
+# les secrets des applications Fly posés une fois (voir deploy/fly/README.md). NON ESSAYÉ de bout en bout.
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Keycloak
+        run: flyctl deploy -c deploy/fly/keycloak.fly.toml --dockerfile deploy/fly/keycloak.Dockerfile --remote-only .
+        env: { FLY_API_TOKEN: "${{ secrets.FLY_API_TOKEN }}" }
+      - name: API
+        run: flyctl deploy -c deploy/fly/api.fly.toml --dockerfile deploy/fly/api.Dockerfile --remote-only .
+        env: { FLY_API_TOKEN: "${{ secrets.FLY_API_TOKEN }}" }
+      - name: Point d'entrée (adresse publique)
+        run: flyctl deploy -c deploy/fly/edge.fly.toml --dockerfile deploy/fly/edge.Dockerfile --remote-only .
+        env: { FLY_API_TOKEN: "${{ secrets.FLY_API_TOKEN }}" }
+      - name: Adresse
+        run: echo "Application : https://chu-djibouti-edge.fly.dev"
