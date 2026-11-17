@@ -8,6 +8,7 @@ import {
   clearCriticalNotifications,
   importCatalogs,
   login,
+  payPending,
   shot,
   sleep,
 } from "./lib.mjs";
@@ -82,6 +83,23 @@ try {
       expect: 201,
     })
   ).data;
+  // Avant le paiement de l'admission, le médecin voit « à payer » et ne peut pas commencer la consultation.
+  const early = await login(browser, "dev-doctor");
+  await early.locator("button.row", { hasText: `Essai${suffix}` }).click();
+  await early
+    .locator("button.row", { hasText: `Essai${suffix}` })
+    .locator("[data-unpaid]")
+    .waitFor();
+  assert.equal(
+    await early.locator("button:has-text('Commencer la consultation')").isDisabled(),
+    true,
+  );
+  assert.match(
+    await early.locator("button:has-text('Commencer la consultation') + small.why").textContent(),
+    /payer la consultation à la caisse/,
+  );
+  await early.context().close();
+  await payPending(patient.id);
 
   const doc = await login(browser, "dev-doctor");
   const row = doc.locator("button.row", { hasText: `Essai${suffix}` });

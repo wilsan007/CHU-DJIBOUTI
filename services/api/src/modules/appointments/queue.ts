@@ -2,6 +2,7 @@ import { writeAudit, type RequestContext } from "../../audit/audit.ts";
 import { localDate } from "../../common/time.ts";
 import { withTransaction, type Db, type Tx } from "../../db.ts";
 import { DomainError, notFound } from "../../errors.ts";
+import { admissionSettled } from "../billing/service.ts";
 import { patientSummaries, relatedPatientIds, type PatientSummary } from "../identity/interface.ts";
 import { todaysAppointment } from "./service.ts";
 
@@ -16,6 +17,8 @@ export interface QueueEntry {
   arrivedAt: string;
   calledAt: string | null;
   waitingMinutes: number;
+  /** Admission payée à la caisse (vrai pour les urgences et les entrées sans admission). */
+  settled?: boolean;
   patient?: PatientSummary;
 }
 
@@ -116,6 +119,9 @@ export async function listQueue(
   for (const e of entries) {
     const p = people.get(e.patientId);
     if (p) e.patient = p;
+    // Payé à la caisse ? (les urgences ne sont jamais bloquées par le paiement)
+    e.settled =
+      e.departmentCode === "URG" || !e.encounterId || (await admissionSettled(db, e.encounterId));
   }
   return entries;
 }

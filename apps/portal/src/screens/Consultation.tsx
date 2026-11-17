@@ -44,9 +44,12 @@ const VITALS = [
 export function ConsultationPanel({
   patientId,
   encounterId,
+  settled = true,
 }: {
   patientId: string;
   encounterId: string;
+  /** Admission payée à la caisse : sinon la consultation ne peut pas commencer. */
+  settled?: boolean;
 }): ReactNode {
   const [consultation, setConsultation] = useState<Consultation | null | undefined>(undefined);
   const [error, setError] = useState<unknown>(null);
@@ -70,7 +73,14 @@ export function ConsultationPanel({
 
   if (consultation === undefined) return <ErrorBox error={error} />;
   if (consultation === null)
-    return <StartConsultation patientId={patientId} encounterId={encounterId} onStarted={load} />;
+    return (
+      <StartConsultation
+        patientId={patientId}
+        encounterId={encounterId}
+        settled={settled}
+        onStarted={load}
+      />
+    );
 
   const closed = consultation.status === "closed";
   return (
@@ -108,10 +118,12 @@ export function ConsultationPanel({
 function StartConsultation({
   patientId,
   encounterId,
+  settled,
   onStarted,
 }: {
   patientId: string;
   encounterId: string;
+  settled: boolean;
   onStarted: () => Promise<void>;
 }): ReactNode {
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -151,9 +163,9 @@ function StartConsultation({
         </label>
       )}
       <ErrorBox error={error} />
-      <button className="primary" onClick={() => void start()}>
+      <Btn className="primary" why={settled ? null : t("why.unpaid")} onClick={() => void start()}>
         {t("consult.start")}
-      </button>
+      </Btn>
     </div>
   );
 }

@@ -13,6 +13,9 @@ import {
   type Caller,
 } from "./support/scenario.ts";
 
+// Ces tests portent sur autre chose que le paiement : la règle « consultation payée d'abord » a son propre test (consultation-payment.test.ts).
+process.env.CONSULTATION_PAYMENT_REQUIRED = "false";
+
 let db: TestDatabase;
 let t: TestApp;
 let call: Caller;

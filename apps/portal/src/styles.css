@@ -559,3 +559,13 @@ details.discount {
   margin-block: 2px 8px;
   flex-basis: 100%;
 }
+.badge.unpaid {
+  background: #ffe2b8;
+  color: #7a4300;
+}
+@media (prefers-color-scheme: dark) {
+  .badge.unpaid {
+    background: #4a3512;
+    color: #ffd699;
+  }
+}

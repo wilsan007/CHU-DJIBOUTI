@@ -48,6 +48,13 @@ const SCREENS: Screen[] = [
     permission: "stock:manage",
     render: (me) => <Stock me={me} />,
   },
+  { id: "imaging", label: "nav.imaging", permission: "imaging:write", render: () => <Imaging /> },
+  {
+    id: "hosp",
+    label: "nav.hosp",
+    permission: "stay:read",
+    render: (me) => <Hospitalization me={me} />,
+  },
   {
     id: "material",
     label: "nav.material",
@@ -62,13 +69,6 @@ const SCREENS: Screen[] = [
     render: (me) => <Staff me={me} />,
   },
   { id: "mySpace", label: "nav.mySpace", permission: "staff:directory", render: () => <MySpace /> },
-  {
-    id: "hosp",
-    label: "nav.hosp",
-    permission: "stay:read",
-    render: (me) => <Hospitalization me={me} />,
-  },
-  { id: "imaging", label: "nav.imaging", permission: "imaging:write", render: () => <Imaging /> },
   {
     id: "direction",
     label: "nav.direction",

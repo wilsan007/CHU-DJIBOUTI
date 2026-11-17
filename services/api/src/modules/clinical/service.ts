@@ -5,7 +5,7 @@ import { withTransaction, type Db, type Tx } from "../../db.ts";
 import { DomainError, notFound } from "../../errors.ts";
 import { SIGNATURES } from "../../common/files.ts";
 import { appendEvent } from "../../events/outbox.ts";
-import { getEncounter } from "../billing/service.ts";
+import { admissionSettled, getEncounter } from "../billing/service.ts";
 import { requireDiagnosis, vitalLimits } from "../catalog/clinical.ts";
 import {
   relatedPatientIds,
@@ -149,6 +149,18 @@ export async function startConsultation(
       }
       if (encounter.status !== "open")
         throw new DomainError("encounter_closed", "Cette admission est clôturée.", 409);
+      // Règle de la maison : on paie d'abord. La consultation ne commence pas tant que la caisse n'a pas encaissé
+      // l'admission, sauf aux urgences (le patient n'est jamais renvoyé à la caisse avant les premiers soins).
+      if (
+        process.env.CONSULTATION_PAYMENT_REQUIRED !== "false" &&
+        encounter.departmentCode !== "URG" &&
+        !(await admissionSettled(tx, input.encounterId))
+      )
+        throw new DomainError(
+          "consultation_unpaid",
+          "La consultation n'est pas encore payée : le patient doit d'abord passer à la caisse.",
+          409,
+        );
       let reason = "";
       let exam = "";
       if (input.templateId !== undefined) {

@@ -155,3 +155,17 @@ export async function clearCriticalNotifications(user) {
   for (const n of data?.notifications ?? [])
     await api(user, `/api/lab/notifications/${n.id}/acknowledge`, { method: "POST", body: {} });
 }
+
+/** Encaisse à la caisse toutes les factures en attente d'un patient (l'admission doit être payée avant la consultation). */
+export async function payPending(patientId) {
+  const { data } = await api(
+    "dev-cashier",
+    `/api/billing/invoices?status=pending&patientId=${patientId}`,
+  );
+  for (const inv of data.invoices)
+    await api("dev-cashier", `/api/billing/invoices/${inv.id}/pay`, {
+      method: "POST",
+      body: { method: "cash", receivedAmount: 1_000_000 },
+      expect: 200,
+    });
+}

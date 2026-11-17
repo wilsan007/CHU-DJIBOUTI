@@ -186,6 +186,18 @@ export async function getEncounter(tx: Tx | Db, id: string): Promise<EncounterSu
   };
 }
 
+/**
+ * La facture d'admission (consultation) de cette admission est-elle payée à la caisse ? Les services s'en servent pour
+ * appliquer la règle « on paie d'abord » à la consultation elle-même (sauf urgences, décidé par l'appelant).
+ */
+export async function admissionSettled(tx: Tx | Db, encounterId: string): Promise<boolean> {
+  const res = await tx.query(
+    "select 1 from billing.invoices where encounter_id = $1 and kind = 'invoice' and order_id is null and status = 'paid' limit 1",
+    [encounterId],
+  );
+  return (res.rowCount ?? 0) > 0;
+}
+
 export interface InvoiceSummary {
   number: string;
   status: "pending" | "paid" | "credited";

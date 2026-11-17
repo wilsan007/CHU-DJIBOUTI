@@ -9,6 +9,7 @@ import {
   login,
   shot,
   sleep,
+  payPending,
 } from "./lib.mjs";
 
 const until = async (fn, what, tries = 40) => {
@@ -188,6 +189,7 @@ try {
   /* ------------------------------------------------------------ pharmacie */
   const p2 = await newPatient("Pharma");
   const adm2 = await admit(p2.id);
+  await payPending(p2.id); // la consultation commence une fois l'admission payée
   const cons = (
     await api("dev-doctor", "/api/consultations", {
       method: "POST",

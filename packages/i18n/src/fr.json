@@ -564,5 +564,7 @@
   "why.emergencyWhy": "Écrivez la justification de l'urgence (10 caractères au moins).",
   "why.noEncounter": "Ce patient n'a pas d'admission en cours.",
   "why.diagnosis": "Ajoutez au moins un diagnostic avant de clôturer.",
-  "why.number": "Saisissez une valeur numérique."
+  "why.number": "Saisissez une valeur numérique.",
+  "doctor.unpaid": "À payer à la caisse",
+  "why.unpaid": "Le patient doit d'abord payer la consultation à la caisse (la liste se met à jour toute seule)."
 }

@@ -50,6 +50,7 @@ node apps/portal/e2e/caisse-qr.mjs        # carte et étiquette : QR photographi
 node apps/portal/e2e/import-patients.mjs  # reprise de patients depuis le jeu fictif (essai, application, rejeu)
 node apps/portal/e2e/audit-ui.mjs         # accessibilité, erreurs, cibles tactiles : tous rôles, 4 modes
 node apps/portal/e2e/click-all.mjs        # clique tous les boutons activés de tous les rôles
+node apps/portal/e2e/parcours-complet.mjs # parcours patient de A à Z, tous rôles (pile lancée avec PORTAL_JWT_SECRET, SMS_GATEWAY_URL=http://127.0.0.1:4599/sms, SMS_GATEWAY_AUTHORIZATION, PORTAL_RESULT_DELAY_HOURS=0)
 node apps/portal/e2e/direction-admin.mjs # tableau de bord de direction et administration des comptes
 ```
 

@@ -13,6 +13,8 @@ interface Entry {
   waitingMinutes: number;
   patientId: string;
   encounterId: string | null;
+  /** Admission payée à la caisse ; faux : le patient doit passer à la caisse avant la consultation. */
+  settled?: boolean;
   patient?: { name: string; identifier: string };
 }
 interface Act {
@@ -100,6 +102,11 @@ export function Doctor(): ReactNode {
                     <span className="muted">
                       {t("doctor.waiting", { minutes: e.waitingMinutes })}
                     </span>
+                    {e.settled === false && (
+                      <span className="badge unpaid" data-unpaid>
+                        {t("doctor.unpaid")}
+                      </span>
+                    )}
                   </button>
                 </li>
               ))}
@@ -198,7 +205,11 @@ function PatientPanel({ entry, onSent }: { entry: Entry; onSent: (m: string) => 
       )}
       <AddAllergy patientId={entry.patientId} onAdded={loadBanner} />
       {entry.encounterId && (
-        <ConsultationPanel patientId={entry.patientId} encounterId={entry.encounterId} />
+        <ConsultationPanel
+          patientId={entry.patientId}
+          encounterId={entry.encounterId}
+          settled={entry.settled !== false}
+        />
       )}
       {can("lab:read") && <Results patientId={entry.patientId} />}
       {can("imaging:read") && <ImagingReports patientId={entry.patientId} />}
