@@ -21,4 +21,4 @@ jobs:
         run: flyctl deploy -c deploy/fly/edge.fly.toml --dockerfile deploy/fly/edge.Dockerfile --remote-only .
         env: { FLY_API_TOKEN: "${{ secrets.FLY_API_TOKEN }}" }
       - name: Adresse
-        run: echo "Application : https://chu-djibouti-edge.fly.dev"
+        run: echo "Application https://chu-djibouti-edge.fly.dev"
